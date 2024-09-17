@@ -26,7 +26,9 @@ if (!defined('TESTS')) {
 /**
  * Path to the test cases directory of CakePHP.
  */
-define('CORE_TEST_CASES', CAKE . 'Test' . DS . 'Case');
+if (!defined('CORE_TEST_CASES')) {
+	define('CORE_TEST_CASES', CAKE . 'Test' . DS . 'Case');
+}
 
 /**
  * Path to the test cases directory of the app.
@@ -35,13 +37,9 @@ if (!defined('APP_TEST_CASES')) {
 	define('APP_TEST_CASES', TESTS . 'Case');
 }
 
-App::uses('CakeTestSuiteCommand', 'TestSuite');
+App::uses('CakeTestSuiteCommand', 'Lib/App/Test');
+App::uses('CakeTestLoader', 'Lib/App/Test');
 
-/**
- * CakeTestSuiteDispatcher handles web requests to the test suite and runs the correct action.
- *
- * @package       Cake.TestSuite
- */
 class CakeTestSuiteDispatcher {
 
 /**
@@ -49,7 +47,7 @@ class CakeTestSuiteDispatcher {
  *
  * @var array
  */
-	public $params = array(
+	public array $params = [
 		'codeCoverage' => false,
 		'case' => null,
 		'core' => false,
@@ -59,36 +57,36 @@ class CakeTestSuiteDispatcher {
 		'show' => 'groups',
 		'show_passes' => false,
 		'filter' => false,
-		'fixture' => null
-	);
+		'fixture' => null,
+	];
 
 /**
  * Baseurl for the request
  *
  * @var string
  */
-	protected $_baseUrl;
+	protected string $_baseUrl;
 
 /**
  * Base dir of the request. Used for accessing assets.
  *
  * @var string
  */
-	protected $_baseDir;
+	protected string $_baseDir;
 
 /**
  * boolean to set auto parsing of params.
  *
  * @var bool
  */
-	protected $_paramsParsed = false;
+	protected bool $_paramsParsed = false;
 
 /**
  * reporter instance used for the request
  *
  * @var CakeBaseReporter
  */
-	protected static $_Reporter = null;
+	protected static ?CakeBaseReporter $_Reporter = null;
 
 /**
  * Constructor
@@ -149,36 +147,7 @@ class CakeTestSuiteDispatcher {
  * @return bool true if found, false otherwise
  */
 	public function loadTestFramework() {
-		if (class_exists('PHPUnit_Framework_TestCase')) {
-			return true;
-		}
-		$phpunitPath = 'phpunit' . DS . 'phpunit';
-		if (defined('PHP_WINDOWS_VERSION_MAJOR')) {
-			$composerGlobalDir[] = env('APPDATA') . DS . 'Composer' . DS . 'vendor' . DS;
-		} else {
-			$composerGlobalDir[] = env('HOME') . DS . '.composer' . DS . 'vendor' . DS;
-		}
-		$vendors = array_merge(App::path('vendors'), $composerGlobalDir);
-		foreach ($vendors as $vendor) {
-			$vendor = rtrim($vendor, DS);
-			if (is_dir($vendor . DS . $phpunitPath)) {
-				ini_set('include_path', $vendor . DS . $phpunitPath . PATH_SEPARATOR . ini_get('include_path'));
-				break;
-			} elseif (is_dir($vendor . DS . 'PHPUnit')) {
-				ini_set('include_path', $vendor . PATH_SEPARATOR . ini_get('include_path'));
-				break;
-			} elseif (is_file($vendor . DS . 'phpunit.phar')) {
-				$backup = $GLOBALS['_SERVER']['SCRIPT_NAME'];
-				$GLOBALS['_SERVER']['SCRIPT_NAME'] = '-';
-				ob_start();
-				$included = include_once $vendor . DS . 'phpunit.phar';
-				ob_end_clean();
-				$GLOBALS['_SERVER']['SCRIPT_NAME'] = $backup;
-				return $included;
-			}
-		}
-		include 'PHPUnit' . DS . 'Autoload.php';
-		return class_exists('PHPUnit_Framework_TestCase');
+		return class_exists('\\PHPUnit\\Framework\\TestCase');
 	}
 
 /**
@@ -196,7 +165,7 @@ class CakeTestSuiteDispatcher {
 	}
 
 /**
- * Generates a page containing the a list of test cases that could be run.
+ * Generates a page containing a list of test cases that could be run.
  *
  * @return void
  */
@@ -274,7 +243,10 @@ class CakeTestSuiteDispatcher {
 		try {
 			static::time();
 			$command = new CakeTestSuiteCommand('CakeTestLoader', $commandArgs);
-			$command->run($options);
+			$command->run(array_merge(
+				[$options],
+				['--bootstrap', 'Test/bootstrap.php', $commandArgs['case']],
+			));
 		} catch (MissingConnectionException $exception) {
 			ob_end_clean();
 			$baseDir = $this->_baseDir;
@@ -287,9 +259,10 @@ class CakeTestSuiteDispatcher {
  * Sets a static timestamp
  *
  * @param bool $reset to set new static timestamp.
+ *
  * @return int timestamp
  */
-	public static function time($reset = false) {
+	public static function time(bool $reset = false): int {
 		static $now;
 		if ($reset || !$now) {
 			$now = time();
@@ -302,10 +275,10 @@ class CakeTestSuiteDispatcher {
  * This method is being used as formatter for created, modified and updated fields in Model::save()
  *
  * @param string $format format to be used.
+ *
  * @return string formatted date
  */
-	public static function date($format) {
+	public static function date(string $format): string {
 		return date($format, static::time());
 	}
-
 }

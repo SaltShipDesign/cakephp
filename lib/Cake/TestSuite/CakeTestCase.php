@@ -1,81 +1,54 @@
 <?php
-/**
- * CakeTestCase file
- *
- * CakePHP(tm) Tests <https://book.cakephp.org/2.0/en/development/testing.html>
- * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- *
- * Licensed under The MIT License
- * For full copyright and license information, please see the LICENSE.txt
- * Redistributions of files must retain the above copyright notice
- *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- * @link          https://book.cakephp.org/2.0/en/development/testing.html CakePHP(tm) Tests
- * @package       Cake.TestSuite
- * @since         CakePHP(tm) v 1.2.0.4667
- * @license       https://opensource.org/licenses/mit-license.php MIT License
- */
+
+use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\TestResult;
 
 App::uses('CakeFixtureManager', 'TestSuite/Fixture');
 App::uses('CakeTestFixture', 'TestSuite/Fixture');
+App::uses('CakeTestSuiteDispatcher', 'Lib/App/Test');
 
-/**
- * CakeTestCase class
- *
- * @package       Cake.TestSuite
- */
-abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
+abstract class CakeTestCase extends TestCase {
 
 /**
  * The class responsible for managing the creation, loading and removing of fixtures
- *
- * @var CakeFixtureManager
  */
-	public $fixtureManager = null;
+	public ?CakeFixtureManager $fixtureManager = null;
 
 /**
  * By default, all fixtures attached to this class will be truncated and reloaded after each test.
- * Set this to false to handle manually
- *
- * @var array
+ * Set this to false handle manually
  */
-	public $autoFixtures = true;
+	public bool $autoFixtures = true;
 
 /**
  * Control table create/drops on each test method.
  *
- * Set this to false to avoid tables to be dropped if they already exist
+ * Set this to false avoid tables to be dropped if they already exist
  * between each test method. Tables will still be dropped at the
  * end of each test runner execution.
- *
- * @var bool
  */
-	public $dropTables = true;
+	public bool $dropTables = true;
 
 /**
  * Configure values to restore at end of test.
- *
- * @var array
  */
-	protected $_configure = array();
+	protected array $_configure = [];
 
 /**
  * Path settings to restore at the end of the test.
- *
- * @var array
  */
-	protected $_pathRestore = array();
+	protected array $_pathRestore = [];
 
 /**
  * Runs the test case and collects the results in a TestResult object.
  * If no TestResult object is passed a new one will be created.
  * This method is run for each test method in this class
  *
- * @param PHPUnit_Framework_TestResult $result The test result object
- * @return PHPUnit_Framework_TestResult
- * @throws InvalidArgumentException
+ * @param TestResult|null $result The test result object
+ *
+ * @return TestResult
  */
-	public function run(PHPUnit_Framework_TestResult $result = null) {
+	public function run(TestResult $result = null): TestResult {
 		$level = ob_get_level();
 
 		if (!empty($this->fixtureManager)) {
@@ -98,18 +71,20 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  * Called when a test case method is about to start (to be overridden when needed.)
  *
  * @param string $method Test method about to get executed.
+ *
  * @return void
  */
-	public function startTest($method) {
+	public function startTest(string $method) {
 	}
 
 /**
  * Called when a test case method has been executed (to be overridden when needed.)
  *
  * @param string $method Test method about that was executed.
+ *
  * @return void
  */
-	public function endTest($method) {
+	public function endTest(string $method) {
 	}
 
 /**
@@ -117,9 +92,10 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  *
  * @param bool $shouldSkip Whether or not the test should be skipped.
  * @param string $message The message to display.
+ *
  * @return bool
  */
-	public function skipIf($shouldSkip, $message = '') {
+	public function skipIf(bool $shouldSkip, string $message = '') {
 		if ($shouldSkip) {
 			$this->markTestSkipped($message);
 		}
@@ -133,7 +109,7 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  *
  * @return void
  */
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 
 		if (empty($this->_configure)) {
@@ -152,7 +128,7 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  *
  * @return void
  */
-	public function tearDown() {
+	public function tearDown(): void {
 		parent::tearDown();
 		App::build($this->_pathRestore, App::RESET);
 		if (class_exists('ClassRegistry', false)) {
@@ -172,9 +148,10 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  * See CakeTestSuiteDispatcher::date()
  *
  * @param string $format format to be used.
+ *
  * @return string
  */
-	public static function date($format = 'Y-m-d H:i:s') {
+	public static function date(string $format = 'Y-m-d H:i:s'): string {
 		return CakeTestSuiteDispatcher::date($format);
 	}
 
@@ -185,7 +162,7 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  *
  * @return void
  */
-	protected function assertPreConditions() {
+	protected function assertPreConditions(): void {
 		parent::assertPreConditions();
 		$this->startTest($this->getName());
 	}
@@ -195,7 +172,7 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  *
  * @return void
  */
-	protected function assertPostConditions() {
+	protected function assertPostConditions(): void {
 		parent::assertPostConditions();
 		$this->endTest($this->getName());
 	}
@@ -228,12 +205,13 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  * @param string $expected The expected value.
  * @param string $result The actual value.
  * @param string $message The message to use for failure.
- * @return bool
+ *
+ * @return void
  */
-	public function assertTextNotEquals($expected, $result, $message = '') {
+	public function assertTextNotEquals(string $expected, string $result, string $message = ''): void {
 		$expected = str_replace(array("\r\n", "\r"), "\n", $expected);
 		$result = str_replace(array("\r\n", "\r"), "\n", $result);
-		return $this->assertNotEquals($expected, $result, $message);
+		$this->assertNotEquals($expected, $result, $message);
 	}
 
 /**
@@ -243,12 +221,13 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  * @param string $expected The expected value.
  * @param string $result The actual value.
  * @param string $message message The message to use for failure.
- * @return bool
+ *
+ * @return void
  */
-	public function assertTextEquals($expected, $result, $message = '') {
+	public function assertTextEquals(string $expected, string $result, string $message = ''): void {
 		$expected = str_replace(array("\r\n", "\r"), "\n", $expected);
 		$result = str_replace(array("\r\n", "\r"), "\n", $result);
-		return $this->assertEquals($expected, $result, $message);
+		$this->assertEquals($expected, $result, $message);
 	}
 
 /**
@@ -258,12 +237,13 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  * @param string $prefix The prefix to check for.
  * @param string $string The string to search in.
  * @param string $message The message to use for failure.
- * @return bool
+ *
+ * @return void
  */
-	public function assertTextStartsWith($prefix, $string, $message = '') {
+	public function assertTextStartsWith(string $prefix, string $string, string $message = ''): void {
 		$prefix = str_replace(array("\r\n", "\r"), "\n", $prefix);
 		$string = str_replace(array("\r\n", "\r"), "\n", $string);
-		return $this->assertStringStartsWith($prefix, $string, $message);
+		$this->assertStringStartsWith($prefix, $string, $message);
 	}
 
 /**
@@ -319,12 +299,16 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  * @param string $haystack The string to search through.
  * @param string $message The message to display on failure.
  * @param bool $ignoreCase Whether or not the search should be case-sensitive.
- * @return bool
+ * @return void
  */
 	public function assertTextContains($needle, $haystack, $message = '', $ignoreCase = false) {
 		$needle = str_replace(array("\r\n", "\r"), "\n", $needle);
 		$haystack = str_replace(array("\r\n", "\r"), "\n", $haystack);
-		return $this->assertContains($needle, $haystack, $message, $ignoreCase);
+		if ($ignoreCase) {
+			$this->assertTrue(strcasecmp($haystack, $needle) == 0, $message);
+		} else {
+			$this->assertStringContainsString($needle, $haystack, $message);
+		}
 	}
 
 /**
@@ -493,7 +477,7 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
 				continue;
 			}
 
-			list($description, $expressions, $itemNum) = $assertion;
+			[$description, $expressions, $itemNum] = $assertion;
 			foreach ((array)$expressions as $expression) {
 				if (preg_match(sprintf('/^%s/s', $expression), $string, $match)) {
 					$matches = true;
@@ -639,10 +623,11 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  *
  * @param mixed $expected the name of the Exception or error
  * @param string $message the text to display if the assertion is not correct
- * @deprecated 3.0.0 This is a compatibility wrapper for 1.x. It will be removed in 3.0
+ *
  * @return void
+ * @deprecated 3.0.0 This is a compatibility wrapper for 1.x. It will be removed in 3.0
  */
-	protected function expectError($expected = false, $message = '') {
+	public function expectError($expected = false, string $message = ''): void {
 		if (!$expected) {
 			$expected = 'Exception';
 		}
@@ -657,7 +642,7 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
  * @deprecated 3.0.0 This is a compatibility wrapper for 1.x. It will be removed in 3.0.
  * @return void
  */
-	public function expectException($name = 'Exception', $message = '') {
+	public function expectException($name = 'Exception', $message = ''): void {
 		$this->setExpectedException($name, $message);
 	}
 
@@ -816,7 +801,7 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
 		$callOriginalMethods = false,
 		$proxyTarget = null
 	) {
-		$phpUnitVersion = PHPUnit_Runner_Version::id();
+		$phpUnitVersion = \PHPUnit\Runner\Version::id();
 		if (version_compare($phpUnitVersion, '5.7.0', '<')) {
 			return parent::getMock($originalClassName, $methods, $arguments,
 					$mockClassName, $callOriginalConstructor, $callOriginalClone,
@@ -855,7 +840,7 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
 		$defaults = ClassRegistry::config('Model');
 		unset($defaults['ds']);
 
-		list($plugin, $name) = pluginSplit($model, true);
+		[$plugin, $name] = pluginSplit($model, true);
 		App::uses($name, $plugin . 'Model');
 
 		$config = array_merge($defaults, (array)$config, array('name' => $name));
@@ -879,5 +864,4 @@ abstract class CakeTestCase extends PHPUnit_Framework_TestCase {
 		ClassRegistry::addObject($name, $mock);
 		return $mock;
 	}
-
 }

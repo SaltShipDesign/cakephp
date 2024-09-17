@@ -1,39 +1,20 @@
 <?php
-/**
- * A class to contain test cases and run them with shared fixtures
- *
- * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- *
- * Licensed under The MIT License
- * For full copyright and license information, please see the LICENSE.txt
- * Redistributions of files must retain the above copyright notice.
- *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- * @link          https://cakephp.org CakePHP(tm) Project
- * @package       Cake.TestSuite
- * @since         CakePHP(tm) v 2.0
- * @license       https://opensource.org/licenses/mit-license.php MIT License
- */
+
+use PHPUnit\Framework\TestSuite;
 
 App::uses('Folder', 'Utility');
 
-/**
- * A class to contain test cases and run them with shared fixtures
- *
- * @package       Cake.TestSuite
- */
-class CakeTestSuite extends PHPUnit_Framework_TestSuite {
+class CakeTestSuite extends TestSuite {
 
 /**
- * Adds all the files in a directory to the test suite. Does not recurse through directories.
+ * Add test directory
  *
- * @param string $directory The directory to add tests from.
+ * @param string $directory Path to folder
  * @return void
  */
-	public function addTestDirectory($directory = '.') {
+	public function addTestDirectory(string $directory = '.'): void {
 		$Folder = new Folder($directory);
-		list(, $files) = $Folder->read(true, true, true);
+		[, $files] = $Folder->read(true, true, true);
 
 		foreach ($files as $file) {
 			if (substr($file, -4) === '.php') {
@@ -43,12 +24,12 @@ class CakeTestSuite extends PHPUnit_Framework_TestSuite {
 	}
 
 /**
- * Recursively adds all the files in a directory to the test suite.
+ * Add test directory
  *
- * @param string $directory The directory subtree to add tests from.
+ * @param string $directory Path to folder
  * @return void
  */
-	public function addTestDirectoryRecursive($directory = '.') {
+	public function addTestDirectoryRecursive(string $directory = '.'): void {
 		$Folder = new Folder($directory);
 		$files = $Folder->tree(null, true, 'files');
 
@@ -58,5 +39,4 @@ class CakeTestSuite extends PHPUnit_Framework_TestSuite {
 			}
 		}
 	}
-
 }
