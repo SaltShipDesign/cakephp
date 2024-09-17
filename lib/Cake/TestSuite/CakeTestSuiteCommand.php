@@ -1,145 +1,123 @@
 <?php
-/**
- * TestRunner for CakePHP Test suite.
- *
- * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- *
- * Licensed under The MIT License
- * For full copyright and license information, please see the LICENSE.txt
- * Redistributions of files must retain the above copyright notice.
- *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- * @link          https://cakephp.org CakePHP(tm) Project
- * @package       Cake.TestSuite
- * @since         CakePHP(tm) v 2.0
- * @license       https://opensource.org/licenses/mit-license.php MIT License
- */
 
-if (!class_exists('PHPUnit_TextUI_Command')) {
-	require_once 'PHPUnit/TextUI/Command.php';
-}
+use PHPUnit\Framework\TestSuite;
+use PHPUnit\Runner\Version;
+use PHPUnit\TextUI\Command;
+use PHPUnit\TextUI\TestRunner;
+use PHPUnit\Util\TextTestListRenderer;
+use PHPUnit\Util\XmlTestListRenderer;
+use SebastianBergmann\RecursionContext\InvalidArgumentException;
 
-App::uses('CakeTestRunner', 'TestSuite');
-App::uses('CakeTestLoader', 'TestSuite');
-App::uses('CakeTestSuite', 'TestSuite');
-App::uses('CakeTestCase', 'TestSuite');
 App::uses('ControllerTestCase', 'TestSuite');
 App::uses('CakeTestModel', 'TestSuite/Fixture');
+App::uses('CakeTestSuite', 'Lib/App/Test');
+App::uses('CakeTestRunner', 'Lib/App/Test');
+App::uses('CakeTestLoader', 'Lib/App/Test');
+App::uses('CakeTestCase', 'Lib/App/Test');
 
-/**
- * Class to customize loading of test suites from CLI
- *
- * @package       Cake.TestSuite
- */
-class CakeTestSuiteCommand extends PHPUnit_TextUI_Command {
+class CakeTestSuiteCommand extends Command {
 
-/**
- * Construct method
- *
- * @param mixed $loader The loader instance to use.
- * @param array $params list of options to be used for this run
- * @throws MissingTestLoaderException When a loader class could not be found.
- */
-	public function __construct($loader, $params = array()) {
+	private bool $versionStringPrinted = false;
+	protected array $_params = [];
+
+	public function __construct($loader, array $params = []) {
 		if ($loader && !class_exists($loader)) {
-			throw new MissingTestLoaderException(array('class' => $loader));
+			throw new MissingTestLoaderException(['class' => $loader]);
 		}
 		$this->arguments['loader'] = $loader;
 		$this->arguments['test'] = $params['case'];
 		$this->arguments['testFile'] = $params;
-		$this->_params = $params;
-
 		$this->longOptions['fixture='] = 'handleFixture';
 		$this->longOptions['output='] = 'handleReporter';
+		$this->_params = $params;
 	}
 
 /**
- * Ugly hack to get around PHPUnit having a hard coded class name for the Runner. :(
+ * Hack to get around PHPUnit having a hard coded class name for the Runner. :(
  *
- * @param array $argv The command arguments
- * @param bool $exit The exit mode.
- * @return void
+ * @throws \PHPUnit\TextUI\Exception
  */
-	public function run(array $argv, $exit = true) {
+	public function run(array $argv, bool $exit = true): int {
 		$this->handleArguments($argv);
 
 		$runner = $this->getRunner($this->arguments['loader']);
 
-		if (is_object($this->arguments['test']) &&
-			$this->arguments['test'] instanceof PHPUnit_Framework_Test) {
+		if ($this->arguments['test'] instanceof TestSuite) {
 			$suite = $this->arguments['test'];
 		} else {
 			$suite = $runner->getTest(
 				$this->arguments['test'],
-				$this->arguments['testFile']
+				$this->arguments['testSuffixes'],
 			);
 		}
 
 		if ($this->arguments['listGroups']) {
-			PHPUnit_TextUI_TestRunner::printVersionString();
-
-			print "Available test group(s):\n";
-
-			$groups = $suite->getGroups();
-			sort($groups);
-
-			foreach ($groups as $group) {
-				print " - $group\n";
-			}
-
-			exit(PHPUnit_TextUI_TestRunner::SUCCESS_EXIT);
+			return $this->handleListGroups($suite, $exit);
 		}
 
-		unset($this->arguments['test']);
-		unset($this->arguments['testFile']);
+		if ($this->arguments['listSuites']) {
+			return $this->handleListSuites($exit);
+		}
+
+		if ($this->arguments['listTests']) {
+			return $this->handleListTests($suite, $exit);
+		}
+
+		if ($this->arguments['listTestsXml']) {
+			return $this->handleListTestsXml($suite, $this->arguments['listTestsXml'], $exit);
+		}
+
+		unset($this->arguments['test'], $this->arguments['testFile']);
 
 		try {
-			$result = $runner->doRun($suite, $this->arguments, false);
-		} catch (PHPUnit_Framework_Exception $e) {
-			print $e->getMessage() . "\n";
+			$runner->run($suite, $this->arguments, $exit);
+		} catch (Throwable $t) {
+			print $t->getMessage() . PHP_EOL;
+		}
+
+		$return = TestRunner::FAILURE_EXIT;
+
+		if (isset($result) && $result->wasSuccessful()) {
+			$return = TestRunner::SUCCESS_EXIT;
+		} elseif (!isset($result) || $result->errorCount() > 0) {
+			$return = TestRunner::EXCEPTION_EXIT;
 		}
 
 		if ($exit) {
-			if (!isset($result) || $result->errorCount() > 0) {
-				exit(PHPUnit_TextUI_TestRunner::EXCEPTION_EXIT);
-			}
-			if ($result->failureCount() > 0) {
-				exit(PHPUnit_TextUI_TestRunner::FAILURE_EXIT);
-			}
-
-			// Default to success even if there are warnings to match phpunit's behavior
-			exit(PHPUnit_TextUI_TestRunner::SUCCESS_EXIT);
+			exit($return);
 		}
+
+		return $return;
 	}
 
 /**
- * Create a runner for the command.
+ * Get runner
  *
- * @param mixed $loader The loader to be used for the test run.
+ * @param $loader Test loader
  * @return CakeTestRunner
  */
-	public function getRunner($loader) {
+	public function getRunner($loader): CakeTestRunner {
 		return new CakeTestRunner($loader, $this->_params);
 	}
 
 /**
- * Handler for customizing the FixtureManager class/
+ * Handle fixture
  *
- * @param string $class Name of the class that will be the fixture manager
+ * @param string $class Class name
+ *
  * @return void
  */
-	public function handleFixture($class) {
+	public function handleFixture(string $class) {
 		$this->arguments['fixtureManager'] = $class;
 	}
 
 /**
- * Handles output flag used to change printing on webrunner.
+ * Handle reporter
  *
- * @param string $reporter The reporter class to use.
- * @return void
+ * @param string $reporter Reporter
+ * @return mixed
  */
-	public function handleReporter($reporter) {
+	public function handleReporter(string $reporter) {
 		$object = null;
 
 		$reporter = ucwords($reporter);
@@ -157,4 +135,224 @@ class CakeTestSuiteCommand extends PHPUnit_TextUI_Command {
 		return $this->arguments['printer'] = $object;
 	}
 
+/**
+ * Print version
+ *
+ * @return void
+ */
+	private function printVersionString(): void {
+		if ($this->versionStringPrinted) {
+			return;
+		}
+
+		print Version::getVersionString() . PHP_EOL . PHP_EOL;
+
+		$this->versionStringPrinted = true;
+	}
+
+/**
+ * Warn about conflicting options
+ *
+ * @psalm-param "listGroups"|"listSuites"|"listTests"|"listTestsXml"|"filter"|"groups"|"excludeGroups"|"testsuite" $key
+ * @psalm-param list<"listGroups"|"listSuites"|"listTests"|"listTestsXml"|"filter"|"groups"|"excludeGroups"|"testsuite"> $keys
+ */
+	private function warnAboutConflictingOptions(string $key, array $keys): void {
+		$warningPrinted = false;
+
+		foreach ($keys as $_key) {
+			if (!empty($this->arguments[$_key])) {
+				printf(
+					'The %s and %s options cannot be combined, %s is ignored' . PHP_EOL,
+					$this->mapKeyToOptionForWarning($_key),
+					$this->mapKeyToOptionForWarning($key),
+					$this->mapKeyToOptionForWarning($_key),
+				);
+
+				$warningPrinted = true;
+			}
+		}
+
+		if ($warningPrinted) {
+			print PHP_EOL;
+		}
+	}
+
+/**
+ * Handle groups
+ *
+ * @param TestSuite $suite Suite
+ * @param bool $exit Exit code
+ * @return int
+ */
+	private function handleListGroups(TestSuite $suite, bool $exit): int {
+		$this->printVersionString();
+
+		$this->warnAboutConflictingOptions(
+			'listGroups',
+			[
+				'filter',
+				'groups',
+				'excludeGroups',
+				'testsuite',
+			],
+		);
+
+		print 'Available test group(s):' . PHP_EOL;
+
+		$groups = $suite->getGroups();
+		sort($groups);
+
+		foreach ($groups as $group) {
+			if (strpos($group, '__phpunit_') === 0) {
+				continue;
+			}
+
+			printf(
+				' - %s' . PHP_EOL,
+				$group,
+			);
+		}
+
+		if ($exit) {
+			exit(TestRunner::SUCCESS_EXIT);
+		}
+
+		return TestRunner::SUCCESS_EXIT;
+	}
+
+/**
+ * Handle suite
+ *
+ * @param bool $exit
+ * @return int
+ */
+	private function handleListSuites(bool $exit): int {
+		$this->printVersionString();
+
+		$this->warnAboutConflictingOptions(
+			'listSuites',
+			[
+				'filter',
+				'groups',
+				'excludeGroups',
+				'testsuite',
+			],
+		);
+
+		print 'Available test suite(s):' . PHP_EOL;
+
+		foreach ($this->arguments['configurationObject']->testSuite() as $testSuite) {
+			printf(
+				' - %s' . PHP_EOL,
+				$testSuite->name(),
+			);
+		}
+
+		if ($exit) {
+			exit(TestRunner::SUCCESS_EXIT);
+		}
+
+		return TestRunner::SUCCESS_EXIT;
+	}
+
+/**
+ * Handle tests
+ *
+ * @param TestSuite $suite Suite
+ * @param bool $exit Exit code
+ * @return int
+ */
+	private function handleListTests(TestSuite $suite, bool $exit): int {
+		$this->printVersionString();
+
+		$this->warnAboutConflictingOptions(
+			'listTests',
+			[
+				'filter',
+				'groups',
+				'excludeGroups',
+			],
+		);
+
+		$renderer = new TextTestListRenderer;
+
+		print $renderer->render($suite);
+
+		if ($exit) {
+			exit(TestRunner::SUCCESS_EXIT);
+		}
+
+		return TestRunner::SUCCESS_EXIT;
+	}
+
+/**
+ * Handle list test xml
+ *
+ * @param TestSuite $suite Suite
+ * @param string $target Target
+ * @param bool $exit Exit code
+ * @return int
+ */
+	private function handleListTestsXml(TestSuite $suite, string $target, bool $exit): int {
+		$this->printVersionString();
+
+		$this->warnAboutConflictingOptions(
+			'listTestsXml',
+			[
+				'filter',
+				'groups',
+				'excludeGroups',
+			],
+		);
+
+		$renderer = new XmlTestListRenderer;
+
+		file_put_contents($target, $renderer->render($suite));
+
+		printf(
+			'Wrote list of tests that would have been run to %s' . PHP_EOL,
+			$target,
+		);
+
+		if ($exit) {
+			exit(TestRunner::SUCCESS_EXIT);
+		}
+
+		return TestRunner::SUCCESS_EXIT;
+	}
+
+/**
+ * Map Key To Option For Warning
+ *
+ * @psalm-param "listGroups"|"listSuites"|"listTests"|"listTestsXml"|"filter"|"groups"|"excludeGroups"|"testsuite" $key
+ * @return string
+ */
+	private function mapKeyToOptionForWarning(string $key): string {
+		switch ($key) {
+			case 'listGroups':
+				return '--list-groups';
+
+			case 'listSuites':
+				return '--list-suites';
+
+			case 'listTests':
+				return '--list-tests';
+
+			case 'listTestsXml':
+				return '--list-tests-xml';
+
+			case 'filter':
+				return '--filter';
+
+			case 'groups':
+				return '--group';
+
+			case 'excludeGroups':
+				return '--exclude-group';
+
+			case 'testsuite':
+				return '--testsuite';
+		}
+		return '';
+	}
 }
