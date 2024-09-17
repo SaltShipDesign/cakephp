@@ -1,64 +1,144 @@
 <?php
-/**
- * TestLoader for CakePHP Test suite.
- *
- * Turns partial paths used on the testsuite console and web UI into full file paths.
- *
- * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- *
- * Licensed under The MIT License
- * For full copyright and license information, please see the LICENSE.txt
- * Redistributions of files must retain the above copyright notice.
- *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- * @link          https://cakephp.org CakePHP(tm) Project
- * @since         CakePHP(tm) v 2.0
- * @license       https://opensource.org/licenses/mit-license.php MIT License
- * @package Cake.TestSuite
- */
+
+use PHPUnit\Framework\TestCase;
+use PHPUnit\Runner\Exception;
+use PHPUnit\Runner\TestSuiteLoader;
+use PHPUnit\Util\FileLoader;
+
+class CakeTestLoader implements TestSuiteLoader {
 
 /**
- * TestLoader for CakePHP Test suite.
- *
- * Turns partial paths used on the testsuite console and web UI into full file paths.
- *
- * @package Cake.TestSuite
+ * @throws Exception
  */
-class CakeTestLoader extends PHPUnit_Runner_StandardTestSuiteLoader {
+	public function load(string $suiteClassFile): ReflectionClass {
+		$suiteClassName = basename($suiteClassFile, '.php');
+		$loadedClasses = get_declared_classes();
 
-/**
- * Load a file and find the first test case / suite in that file.
- *
- * @param string $filePath The file path to load
- * @param string $params Additional parameters
- * @return ReflectionClass
- */
-	public function load($filePath, $params = '') {
-		$file = $this->_resolveTestFile($filePath, $params);
-		return parent::load('', $file);
+		if (!class_exists($suiteClassName, false)) {
+			/* @noinspection UnusedFunctionResultInspection */
+			FileLoader::checkAndLoad($suiteClassFile);
+
+			$loadedClasses = array_values(
+				array_diff(get_declared_classes(), $loadedClasses),
+			);
+
+			if (empty($loadedClasses)) {
+				throw new Exception(
+					sprintf(
+						'Class %s could not be found in %s',
+						$suiteClassName,
+						$suiteClassFile,
+					),
+				);
+			}
+		}
+
+		if (!class_exists($suiteClassName, false)) {
+			$offset = 0 - strlen($suiteClassName);
+
+			foreach ($loadedClasses as $loadedClass) {
+				// @see https://github.com/sebastianbergmann/phpunit/issues/5020
+				if (stripos(substr($loadedClass, $offset - 1), '\\' . $suiteClassName) === 0 ||
+					stripos(substr($loadedClass, $offset - 1), '_' . $suiteClassName) === 0) {
+					$suiteClassName = $loadedClass;
+
+					break;
+				}
+			}
+		}
+
+		if (!class_exists($suiteClassName, false)) {
+			throw new Exception(
+				sprintf(
+					'Class %s could not be found in %s',
+					$suiteClassName,
+					$suiteClassFile,
+				),
+			);
+		}
+
+		try {
+			$class = new ReflectionClass($suiteClassName);
+			// @codeCoverageIgnoreStart
+		} catch (ReflectionException $e) {
+			throw new Exception(
+				$e->getMessage(),
+				$e->getCode(),
+				$e,
+			);
+		}
+		// @codeCoverageIgnoreEnd
+
+		if ($class->isSubclassOf(TestCase::class)) {
+			if ($class->isAbstract()) {
+				throw new Exception(
+					sprintf(
+						'Class %s declared in %s is abstract',
+						$suiteClassName,
+						$suiteClassFile,
+					),
+				);
+			}
+
+			return $class;
+		}
+
+		if ($class->hasMethod('suite')) {
+			try {
+				$method = $class->getMethod('suite');
+				// @codeCoverageIgnoreStart
+			} catch (ReflectionException $e) {
+				throw new Exception(
+					sprintf(
+						'Method %s::suite() declared in %s is abstract',
+						$suiteClassName,
+						$suiteClassFile,
+					),
+				);
+			}
+
+			if (!$method->isPublic()) {
+				throw new Exception(
+					sprintf(
+						'Method %s::suite() declared in %s is not public',
+						$suiteClassName,
+						$suiteClassFile,
+					),
+				);
+			}
+
+			if (!$method->isStatic()) {
+				throw new Exception(
+					sprintf(
+						'Method %s::suite() declared in %s is not static',
+						$suiteClassName,
+						$suiteClassFile,
+					),
+				);
+			}
+		}
+
+		return $class;
 	}
 
 /**
- * Convert path fragments used by CakePHP's test runner to absolute paths that can be fed to PHPUnit.
+ * Reload
  *
- * @param string $filePath The file path to load.
- * @param string $params Additional parameters.
- * @return string Converted path fragments.
+ * @param ReflectionClass $aClass The class
+ * @return ReflectionClass
  */
-	protected function _resolveTestFile($filePath, $params) {
-		$basePath = $this->_basePath($params) . DS . $filePath;
-		$ending = 'Test.php';
-		return (strpos($basePath, $ending) === (strlen($basePath) - strlen($ending))) ? $basePath : $basePath . $ending;
+	public function reload(ReflectionClass $aClass): ReflectionClass {
+		return $aClass;
 	}
 
 /**
  * Generates the base path to a set of tests based on the parameters.
  *
  * @param array $params The path parameters.
+ *
  * @return string The base path.
  */
-	protected static function _basePath($params) {
+	protected static function _basePath(array $params): ?string {
 		$result = null;
 		if (!empty($params['core'])) {
 			$result = CORE_TEST_CASES;
@@ -81,10 +161,11 @@ class CakeTestLoader extends PHPUnit_Runner_StandardTestSuiteLoader {
 /**
  * Get the list of files for the test listing.
  *
- * @param string $params Path parameters
+ * @param array $params Path parameters
+ *
  * @return array
  */
-	public static function generateTestList($params) {
+	public static function generateTestList(array $params): array {
 		$directory = static::_basePath($params);
 		$fileList = static::_getRecursiveFileList($directory);
 
@@ -103,9 +184,10 @@ class CakeTestLoader extends PHPUnit_Runner_StandardTestSuiteLoader {
  * a given fileTestFunction, like isTestCaseFile()
  *
  * @param string $directory The directory to scan for files.
+ *
  * @return array
  */
-	protected static function _getRecursiveFileList($directory = '.') {
+	protected static function _getRecursiveFileList(string $directory = '.'): array {
 		$fileList = array();
 		if (!is_dir($directory)) {
 			return $fileList;
@@ -121,5 +203,4 @@ class CakeTestLoader extends PHPUnit_Runner_StandardTestSuiteLoader {
 		}
 		return $fileList;
 	}
-
 }
