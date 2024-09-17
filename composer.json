@@ -1,5 +1,5 @@
 {
-	"name": "saltshipdesign/cakephp",
+	"name": "cakephp/cakephp",
 	"description": "Salt Ship Design fork of CakePHP framework",
 	"type": "library",
 	"keywords": ["framework"],
