@@ -1,6 +1,5 @@
 <?php
 
-App::uses('CakeTestCase', 'Lib/App/Test');
 App::uses('Dispatcher', 'Routing');
 App::uses('Router', 'Routing');
 App::uses('CakeRequest', 'Network');

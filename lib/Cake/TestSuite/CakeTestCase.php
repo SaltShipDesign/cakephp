@@ -5,7 +5,6 @@ use PHPUnit\Framework\TestResult;
 
 App::uses('CakeFixtureManager', 'TestSuite/Fixture');
 App::uses('CakeTestFixture', 'TestSuite/Fixture');
-App::uses('CakeTestSuiteDispatcher', 'Lib/App/Test');
 
 abstract class CakeTestCase extends TestCase {
 
