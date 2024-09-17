@@ -10,10 +10,6 @@ use SebastianBergmann\RecursionContext\InvalidArgumentException;
 
 App::uses('ControllerTestCase', 'TestSuite');
 App::uses('CakeTestModel', 'TestSuite/Fixture');
-App::uses('CakeTestSuite', 'Lib/App/Test');
-App::uses('CakeTestRunner', 'Lib/App/Test');
-App::uses('CakeTestLoader', 'Lib/App/Test');
-App::uses('CakeTestCase', 'Lib/App/Test');
 
 class CakeTestSuiteCommand extends Command {
 

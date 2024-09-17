@@ -37,9 +37,6 @@ if (!defined('APP_TEST_CASES')) {
 	define('APP_TEST_CASES', TESTS . 'Case');
 }
 
-App::uses('CakeTestSuiteCommand', 'Lib/App/Test');
-App::uses('CakeTestLoader', 'Lib/App/Test');
-
 class CakeTestSuiteDispatcher {
 
 /**
