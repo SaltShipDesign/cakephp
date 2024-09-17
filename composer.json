@@ -1,9 +1,8 @@
 {
-	"name": "cakephp/cakephp",
-	"description": "The CakePHP framework",
+	"name": "saltshipdesign/cakephp",
+	"description": "Salt Ship Design fork of CakePHP framework",
 	"type": "library",
 	"keywords": ["framework"],
-	"homepage": "https://cakephp.org",
 	"license": "MIT",
 	"authors": [
 		{
