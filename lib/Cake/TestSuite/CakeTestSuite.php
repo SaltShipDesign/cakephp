@@ -2,6 +2,7 @@
 
 use PHPUnit\Framework\TestSuite;
 
+App::uses('CakeTestCase', 'TestSuite');
 App::uses('Folder', 'Utility');
 
 class CakeTestSuite extends TestSuite {

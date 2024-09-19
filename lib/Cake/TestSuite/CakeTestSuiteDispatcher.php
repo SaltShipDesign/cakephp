@@ -44,7 +44,7 @@ class CakeTestSuiteDispatcher {
  *
  * @var array
  */
-	public array $params = [
+	public $params = [
 		'codeCoverage' => false,
 		'case' => null,
 		'core' => false,
@@ -62,28 +62,28 @@ class CakeTestSuiteDispatcher {
  *
  * @var string
  */
-	protected string $_baseUrl;
+	protected $_baseUrl;
 
 /**
  * Base dir of the request. Used for accessing assets.
  *
  * @var string
  */
-	protected string $_baseDir;
+	protected $_baseDir;
 
 /**
  * boolean to set auto parsing of params.
  *
  * @var bool
  */
-	protected bool $_paramsParsed = false;
+	protected $_paramsParsed = false;
 
 /**
  * reporter instance used for the request
  *
- * @var CakeBaseReporter
+ * @var CakeBaseReporter||null
  */
-	protected static ?CakeBaseReporter $_Reporter = null;
+	protected static $_Reporter = null;
 
 /**
  * Constructor

@@ -6,15 +6,15 @@ use PHPUnit\TextUI\Command;
 use PHPUnit\TextUI\TestRunner;
 use PHPUnit\Util\TextTestListRenderer;
 use PHPUnit\Util\XmlTestListRenderer;
-use SebastianBergmann\RecursionContext\InvalidArgumentException;
 
+App::uses('CakeTestRunner', 'TestSuite');
 App::uses('ControllerTestCase', 'TestSuite');
 App::uses('CakeTestModel', 'TestSuite/Fixture');
 
 class CakeTestSuiteCommand extends Command {
 
-	private bool $versionStringPrinted = false;
-	protected array $_params = [];
+	private $versionStringPrinted = false;
+	protected $_params = [];
 
 	public function __construct($loader, array $params = []) {
 		if ($loader && !class_exists($loader)) {

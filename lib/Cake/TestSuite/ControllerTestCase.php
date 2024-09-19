@@ -15,12 +15,12 @@ class ControllerTestDispatcher extends Dispatcher {
 /**
  * The controller to use in the dispatch process
  */
-	public ?Controller $testController = null;
+	public $testController = null;
 
 /**
  * Use custom routes during tests
  */
-	public bool $loadRoutes = true;
+	public $loadRoutes = true;
 
 /**
  * Returns the test controller
