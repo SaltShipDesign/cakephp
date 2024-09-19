@@ -22,7 +22,7 @@
 		"source": "https://github.com/cakephp/cakephp"
 	},
 	"require": {
-		"php": ">=7.4.0",
+		"php": ">=7.3.0",
 		"ext-mcrypt": "*",
 		"cakephp/cakephp": "~2.11"
 	},
