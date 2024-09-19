@@ -11,13 +11,13 @@ abstract class CakeTestCase extends TestCase {
 /**
  * The class responsible for managing the creation, loading and removing of fixtures
  */
-	public ?CakeFixtureManager $fixtureManager = null;
+	public $fixtureManager = null;
 
 /**
  * By default, all fixtures attached to this class will be truncated and reloaded after each test.
  * Set this to false handle manually
  */
-	public bool $autoFixtures = true;
+	public $autoFixtures = true;
 
 /**
  * Control table create/drops on each test method.
@@ -26,17 +26,17 @@ abstract class CakeTestCase extends TestCase {
  * between each test method. Tables will still be dropped at the
  * end of each test runner execution.
  */
-	public bool $dropTables = true;
+	public $dropTables = true;
 
 /**
  * Configure values to restore at end of test.
  */
-	protected array $_configure = [];
+	protected $_configure = [];
 
 /**
  * Path settings to restore at the end of the test.
  */
-	protected array $_pathRestore = [];
+	protected $_pathRestore = [];
 
 /**
  * Runs the test case and collects the results in a TestResult object.

@@ -9,8 +9,8 @@ App::uses('CakeFixtureManager', 'TestSuite/Fixture');
 
 class CakeTestRunner extends BaseTestRunner {
 
-	public TestRunner $testRunner;
-	protected array $_params;
+	public $testRunner;
+	protected $_params;
 
 /**
  * Lets us pass in some options needed for CakePHP's webrunner.

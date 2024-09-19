@@ -21,6 +21,7 @@ App::uses('Shell', 'Console');
 App::uses('CakeTestSuiteDispatcher', 'TestSuite');
 App::uses('CakeTestSuiteCommand', 'TestSuite');
 App::uses('CakeTestLoader', 'TestSuite');
+App::uses('CakeTestSuite', 'TestSuite');
 
 /**
  * Class TestsShell
@@ -30,7 +31,7 @@ class TestShell extends Shell {
 /**
  * Dispatcher object for the run.
  */
-	protected ?CakeTestSuiteDispatcher $_dispatcher = null;
+	protected $_dispatcher = null;
 
 /**
  * Gets the option parser instance and configures it.
@@ -180,7 +181,7 @@ class TestShell extends Shell {
  *
  * @return array|null Array of params for CakeTestDispatcher or null.
  */
-	protected function _parseArgs(): ?array {
+	protected function _parseArgs() {
 		if (empty($this->args)) {
 			return null;
 		}
