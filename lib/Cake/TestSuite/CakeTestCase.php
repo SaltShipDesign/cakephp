@@ -618,34 +618,6 @@ abstract class CakeTestCase extends TestCase {
 	}
 
 /**
- * Compatibility wrapper function for setExpectedException
- *
- * @param mixed $expected the name of the Exception or error
- * @param string $message the text to display if the assertion is not correct
- *
- * @return void
- * @deprecated 3.0.0 This is a compatibility wrapper for 1.x. It will be removed in 3.0
- */
-	public function expectError($expected = false, string $message = ''): void {
-		if (!$expected) {
-			$expected = 'Exception';
-		}
-		$this->setExpectedException($expected, $message);
-	}
-
-/**
- * Compatibility wrapper function for setExpectedException
- *
- * @param mixed $name The name of the expected Exception.
- * @param string $message the text to display if the assertion is not correct
- * @deprecated 3.0.0 This is a compatibility wrapper for 1.x. It will be removed in 3.0.
- * @return void
- */
-	public function expectException($name = 'Exception', $message = ''): void {
-		$this->setExpectedException($name, $message);
-	}
-
-/**
  * Compatibility wrapper function for assertSame
  *
  * @param mixed $first
