@@ -182,7 +182,7 @@ class SmtpTransport extends AbstractTransport {
  * @throws SocketException
  */
 	protected function _auth() {
-		if (isset($this->_config['username']) && isset($this->_config['password'])) {
+		if (!empty($this->_config['username']) && isset($this->_config['password'])) {
 			$replyCode = $this->_smtpSend('AUTH LOGIN', '334|500|502|504');
 			if ($replyCode == '334') {
 				try {
