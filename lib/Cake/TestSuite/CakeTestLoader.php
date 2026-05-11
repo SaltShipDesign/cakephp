@@ -185,6 +185,9 @@ class CakeTestLoader implements TestSuiteLoader {
  */
 	public static function generateTestList(array $params): array {
 		$directory = static::_basePath($params);
+		if ($directory === null) {
+			return array();
+		}
 		$fileList = static::_getRecursiveFileList($directory);
 
 		$testCases = array();
