@@ -140,6 +140,30 @@ abstract class CakeTestCase extends TestCase {
 	}
 
 /**
+ * Polyfill for attributeEqualTo() constraint, removed in PHPUnit 9.
+ * Returns a Callback constraint that reads the named property via reflection
+ * (so protected/private fields work) and compares with loose equality.
+ *
+ * @param string $attributeName
+ * @param mixed $value
+ * @return \PHPUnit\Framework\Constraint\Callback
+ */
+	public static function attributeEqualTo(string $attributeName, $value): \PHPUnit\Framework\Constraint\Callback {
+		return new \PHPUnit\Framework\Constraint\Callback(function ($other) use ($attributeName, $value) {
+			if (!is_object($other)) {
+				return false;
+			}
+			try {
+				$property = new \ReflectionProperty($other, $attributeName);
+			} catch (\ReflectionException $e) {
+				return false;
+			}
+			$property->setAccessible(true);
+			return $property->getValue($other) == $value;
+		});
+	}
+
+/**
  * Polyfill for assertAttributeEquals, removed in PHPUnit 9.
  * Reads a (possibly protected/private) attribute via reflection and compares.
  *
