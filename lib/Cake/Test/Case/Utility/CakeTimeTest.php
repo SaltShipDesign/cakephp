@@ -473,7 +473,10 @@ class CakeTimeTest extends CakeTestCase {
  */
 	public function testNiceShortI18n() {
 		$restore = setlocale(LC_ALL, 0);
-		setlocale(LC_ALL, 'es_ES');
+		$switched = setlocale(LC_ALL, 'es_ES.UTF-8', 'es_ES');
+		if ($switched === false) {
+			$this->markTestSkipped('Locale es_ES is not available on this host (install via `locale-gen es_ES`).');
+		}
 		$time = strtotime('2015-01-07 03:05:00');
 		$this->assertEquals('ene 7th 2015, 03:05', $this->Time->niceShort($time));
 		setlocale(LC_ALL, $restore);

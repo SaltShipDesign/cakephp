@@ -149,7 +149,13 @@ class CacheHelper extends AppHelper {
 			$cacheTime = $cacheAction;
 		}
 
-		if ($cacheTime && $cacheTime > 0) {
+		// PHP 8 changed string-to-int comparison: non-numeric strings (like
+		// the relative-time expression '+2 sec') no longer cast to int when
+		// compared with `> 0` — they fall back to string comparison and
+		// "+2 sec" > "0" is FALSE. Treat any non-empty cacheTime as positive
+		// unless it's explicitly a non-positive numeric value.
+		$isPositive = !empty($cacheTime) && (!is_numeric($cacheTime) || (int)$cacheTime > 0);
+		if ($isPositive) {
 			$cached = $this->_parseOutput($out);
 			try {
 				$this->_writeFile($cached, $cacheTime, $useCallbacks);

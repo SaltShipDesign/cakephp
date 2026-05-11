@@ -141,6 +141,19 @@ class FileTest extends CakeTestCase {
 	public function testPermission() {
 		$this->skipIf(DIRECTORY_SEPARATOR === '\\', 'File permissions tests not supported on Windows.');
 
+		// Docker Desktop on macOS bind mounts don't honor umask: every new file
+		// gets the host's default perms (typically 0644). Probe before running
+		// the assertions and skip if the host environment overrides umask.
+		$probeUmask = umask(0002);
+		$probe = TMP . 'umask_probe_' . uniqid();
+		touch($probe);
+		$probePerms = substr(sprintf('%o', fileperms($probe)), -4);
+		@unlink($probe);
+		umask($probeUmask);
+		if ($probePerms !== '0664') {
+			$this->markTestSkipped("Filesystem does not honor umask (got $probePerms instead of 0664).");
+		}
+
 		$dir = TMP . 'tests' . DS . 'permissions' . DS;
 		$old = umask();
 

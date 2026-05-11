@@ -113,8 +113,10 @@ class DebuggerTest extends CakeTestCase {
 		$out .= '';
 		$result = Debugger::output(true);
 
-		$this->assertEquals('Notice', $result[0]['error']);
-		$this->assertRegExp('/Undefined variable\:\s+out/', $result[0]['description']);
+		// PHP 8.0 promoted "Undefined variable" from E_NOTICE to E_WARNING.
+		$expectedError = PHP_VERSION_ID >= 80000 ? 'Warning' : 'Notice';
+		$this->assertEquals($expectedError, $result[0]['error']);
+		$this->assertRegExp('/Undefined variable\:?\s+\$?out/', $result[0]['description']);
 		$this->assertRegExp('/DebuggerTest::testOutput/i', $result[0]['trace']);
 
 		ob_start();
@@ -122,7 +124,7 @@ class DebuggerTest extends CakeTestCase {
 		$other .= '';
 		$result = ob_get_clean();
 
-		$this->assertRegExp('/Undefined variable:\s+other/', $result);
+		$this->assertRegExp('/Undefined variable:?\s+\$?other/', $result);
 		$this->assertRegExp('/Context:/', $result);
 		$this->assertRegExp('/DebuggerTest::testOutput/i', $result);
 

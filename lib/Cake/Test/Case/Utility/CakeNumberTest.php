@@ -343,7 +343,9 @@ class CakeNumberTest extends CakeTestCase {
 			'places' => 2,
 			'decimal' => '.'
 		));
-		$this->assertEquals('0.2', $result);
+		// With an empty currency and the default fractionSymbol=false, the
+		// fraction branch is skipped — format() honors places=2 strictly.
+		$this->assertEquals('0.20', $result);
 	}
 
 /**
