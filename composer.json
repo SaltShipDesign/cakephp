@@ -21,7 +21,7 @@
 		"source": "https://github.com/cakephp/cakephp"
 	},
 	"require": {
-		"php": ">=7.3.0,<8.0.0"
+		"php": ">=8.0.0,<8.3.0"
 	},
 	"suggest": {
 		"ext-openssl": "You need to install ext-openssl or ext-mcrypt to use AES-256 encryption",
@@ -29,6 +29,7 @@
 	},
 	"require-dev": {
 		"phpunit/phpunit": "^9.6.20",
+		"doctrine/instantiator": "~2.0.0",
 		"cakephp/cakephp-codesniffer": "^1.0.0"
 	},
 	"config": {

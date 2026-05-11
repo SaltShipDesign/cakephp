@@ -464,6 +464,7 @@ class ModelValidator implements ArrayAccess, IteratorAggregate, Countable {
  * @param string $field name of the field to check
  * @return bool
  */
+	#[\ReturnTypeWillChange]
 	public function offsetExists($field) {
 		$this->_parseRules();
 		return isset($this->_fields[$field]);
@@ -475,6 +476,7 @@ class ModelValidator implements ArrayAccess, IteratorAggregate, Countable {
  * @param string $field name of the field to check
  * @return CakeValidationSet
  */
+	#[\ReturnTypeWillChange]
 	public function offsetGet($field) {
 		$this->_parseRules();
 		return $this->_fields[$field];
@@ -487,6 +489,7 @@ class ModelValidator implements ArrayAccess, IteratorAggregate, Countable {
  * @param array|CakeValidationSet $rules set of rules to apply to field
  * @return void
  */
+	#[\ReturnTypeWillChange]
 	public function offsetSet($field, $rules) {
 		$this->_parseRules();
 		if (!$rules instanceof CakeValidationSet) {
@@ -503,6 +506,7 @@ class ModelValidator implements ArrayAccess, IteratorAggregate, Countable {
  * @param string $field name of the field to unset
  * @return void
  */
+	#[\ReturnTypeWillChange]
 	public function offsetUnset($field) {
 		$this->_parseRules();
 		unset($this->_fields[$field]);
@@ -513,6 +517,7 @@ class ModelValidator implements ArrayAccess, IteratorAggregate, Countable {
  *
  * @return ArrayIterator
  */
+	#[\ReturnTypeWillChange]
 	public function getIterator() {
 		$this->_parseRules();
 		return new ArrayIterator($this->_fields);
@@ -523,6 +528,7 @@ class ModelValidator implements ArrayAccess, IteratorAggregate, Countable {
  *
  * @return int
  */
+	#[\ReturnTypeWillChange]
 	public function count() {
 		$this->_parseRules();
 		return count($this->_fields);

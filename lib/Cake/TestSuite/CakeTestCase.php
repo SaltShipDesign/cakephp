@@ -94,11 +94,83 @@ abstract class CakeTestCase extends TestCase {
  *
  * @return bool
  */
-	public function skipIf(bool $shouldSkip, string $message = '') {
+	public function skipIf($shouldSkip, string $message = ''): bool {
+		$shouldSkip = (bool)$shouldSkip;
 		if ($shouldSkip) {
 			$this->markTestSkipped($message);
 		}
 		return $shouldSkip;
+	}
+
+/**
+ * Backwards-compatible assertContains that handles string haystacks.
+ * PHPUnit 9 split string-contains into assertStringContainsString; CakePHP 2.x
+ * tests still pass strings to assertContains. Dispatch by haystack type.
+ *
+ * @param mixed $needle
+ * @param mixed $haystack
+ * @param string $message
+ * @return void
+ */
+	public static function assertContains($needle, $haystack, string $message = ''): void {
+		if (is_string($haystack)) {
+			static::assertStringContainsString((string)$needle, $haystack, $message);
+			return;
+		}
+		parent::assertContains($needle, $haystack, $message);
+	}
+
+/**
+ * Polyfill for the pre-PHPUnit 6 setExpectedException() method, removed
+ * in PHPUnit 9. Some CakePHP 2.x tests still call it.
+ *
+ * @param string $exceptionName
+ * @param string|null $exceptionMessage
+ * @param int|null $exceptionCode
+ * @return void
+ */
+	public function setExpectedException($exceptionName, $exceptionMessage = null, $exceptionCode = null) {
+		$this->expectException($exceptionName);
+		if ($exceptionMessage !== null) {
+			$this->expectExceptionMessage($exceptionMessage);
+		}
+		if ($exceptionCode !== null) {
+			$this->expectExceptionCode($exceptionCode);
+		}
+	}
+
+/**
+ * Polyfill for assertAttributeEquals, removed in PHPUnit 9.
+ * Reads a (possibly protected/private) attribute via reflection and compares.
+ *
+ * @param mixed $expected
+ * @param string $actualAttributeName
+ * @param object|string $actualClassOrObject
+ * @param string $message
+ * @return void
+ */
+	public static function assertAttributeEquals($expected, string $actualAttributeName, $actualClassOrObject, string $message = ''): void {
+		$reflection = new \ReflectionClass($actualClassOrObject);
+		$property = $reflection->getProperty($actualAttributeName);
+		$property->setAccessible(true);
+		$actual = is_object($actualClassOrObject) ? $property->getValue($actualClassOrObject) : $property->getValue();
+		static::assertEquals($expected, $actual, $message);
+	}
+
+/**
+ * Mirror of assertContains: route string haystacks to assertStringNotContainsString.
+ *
+ * @param mixed $needle
+ * @param mixed $haystack
+ * @param string $message
+ * @return void
+ */
+	public static function assertNotContains($needle, $haystack, string $message = ''): void {
+		if (is_string($haystack)) {
+			static::assertStringNotContainsString((string)$needle, $haystack, $message);
+			return;
+		}
+		parent::assertNotContains($needle, $haystack, $message);
 	}
 
 /**
@@ -111,6 +183,8 @@ abstract class CakeTestCase extends TestCase {
 	public function setUp(): void {
 		parent::setUp();
 
+		$this->_processExpectedExceptionAnnotations();
+
 		if (empty($this->_configure)) {
 			$this->_configure = Configure::read();
 		}
@@ -119,6 +193,42 @@ abstract class CakeTestCase extends TestCase {
 		}
 		if (class_exists('Router', false)) {
 			Router::reload();
+		}
+	}
+
+/**
+ * Polyfill for @expectedException* docblock annotations (removed in PHPUnit 9).
+ * Reads the current test method's docblock and calls expectException()/Message()/Code()
+ * accordingly. Lets the ~234 legacy annotations across the test suite keep working
+ * without rewriting them as in-body expectException() calls.
+ *
+ * @return void
+ */
+	protected function _processExpectedExceptionAnnotations(): void {
+		$name = $this->getName(false);
+		if (!$name) {
+			return;
+		}
+		try {
+			$method = new \ReflectionMethod($this, $name);
+		} catch (\ReflectionException $e) {
+			return;
+		}
+		$doc = $method->getDocComment();
+		if (!$doc) {
+			return;
+		}
+		if (preg_match('/@expectedException\s+([^\s\*]+)/', $doc, $m)) {
+			$this->expectException($m[1]);
+		}
+		if (preg_match('/@expectedExceptionMessage\s+([^\r\n\*]+)/', $doc, $m)) {
+			$this->expectExceptionMessage(trim($m[1]));
+		}
+		if (preg_match('/@expectedExceptionMessageRegExp\s+([^\r\n\*]+)/', $doc, $m)) {
+			$this->expectExceptionMessageMatches(trim($m[1]));
+		}
+		if (preg_match('/@expectedExceptionCode\s+([^\s\*]+)/', $doc, $m)) {
+			$this->expectExceptionCode(is_numeric($m[1]) ? (int)$m[1] : $m[1]);
 		}
 	}
 

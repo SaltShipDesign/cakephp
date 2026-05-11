@@ -1,6 +1,7 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\TestSuite;
 use PHPUnit\Runner\Exception;
 use PHPUnit\Runner\TestSuiteLoader;
 use PHPUnit\Util\FileLoader;
@@ -42,6 +43,23 @@ class CakeTestLoader implements TestSuiteLoader {
 					stripos(substr($loadedClass, $offset - 1), '_' . $suiteClassName) === 0) {
 					$suiteClassName = $loadedClass;
 
+					break;
+				}
+			}
+		}
+
+		if (!class_exists($suiteClassName, false) && substr($suiteClassName, -4) === 'Test') {
+			$alt = substr($suiteClassName, 0, -4);
+			if (class_exists($alt, false)) {
+				$suiteClassName = $alt;
+			}
+		}
+
+		if (!class_exists($suiteClassName, false)) {
+			foreach ($loadedClasses as $loadedClass) {
+				if (is_subclass_of($loadedClass, TestCase::class) ||
+					is_subclass_of($loadedClass, TestSuite::class)) {
+					$suiteClassName = $loadedClass;
 					break;
 				}
 			}

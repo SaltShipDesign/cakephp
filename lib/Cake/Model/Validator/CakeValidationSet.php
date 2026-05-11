@@ -310,6 +310,7 @@ class CakeValidationSet implements ArrayAccess, IteratorAggregate, Countable {
  * @param string $index name of the rule
  * @return bool
  */
+	#[\ReturnTypeWillChange]
 	public function offsetExists($index) {
 		return isset($this->_rules[$index]);
 	}
@@ -320,6 +321,7 @@ class CakeValidationSet implements ArrayAccess, IteratorAggregate, Countable {
  * @param string $index name of the rule
  * @return CakeValidationRule
  */
+	#[\ReturnTypeWillChange]
 	public function offsetGet($index) {
 		return $this->_rules[$index];
 	}
@@ -335,6 +337,7 @@ class CakeValidationSet implements ArrayAccess, IteratorAggregate, Countable {
  * @return void
  * @see http://www.php.net/manual/en/arrayobject.offsetset.php
  */
+	#[\ReturnTypeWillChange]
 	public function offsetSet($index, $rule) {
 		$this->setRule($index, $rule);
 	}
@@ -345,6 +348,7 @@ class CakeValidationSet implements ArrayAccess, IteratorAggregate, Countable {
  * @param string $index name of the rule
  * @return void
  */
+	#[\ReturnTypeWillChange]
 	public function offsetUnset($index) {
 		unset($this->_rules[$index]);
 	}
@@ -354,6 +358,7 @@ class CakeValidationSet implements ArrayAccess, IteratorAggregate, Countable {
  *
  * @return ArrayIterator
  */
+	#[\ReturnTypeWillChange]
 	public function getIterator() {
 		return new ArrayIterator($this->_rules);
 	}
@@ -363,6 +368,7 @@ class CakeValidationSet implements ArrayAccess, IteratorAggregate, Countable {
  *
  * @return int
  */
+	#[\ReturnTypeWillChange]
 	public function count() {
 		return count($this->_rules);
 	}

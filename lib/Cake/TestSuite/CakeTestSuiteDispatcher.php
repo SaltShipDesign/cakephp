@@ -144,7 +144,47 @@ class CakeTestSuiteDispatcher {
  * @return bool true if found, false otherwise
  */
 	public function loadTestFramework() {
-		return class_exists('\\PHPUnit\\Framework\\TestCase');
+		if (!class_exists('\\PHPUnit\\Framework\\TestCase')) {
+			return false;
+		}
+		static::aliasLegacyClasses();
+		App::uses('CakeTestCase', 'TestSuite');
+		App::uses('ControllerTestCase', 'TestSuite');
+		App::uses('CakeTestModel', 'TestSuite/Fixture');
+		App::uses('CakeTestFixture', 'TestSuite/Fixture');
+		App::uses('CakeFixtureManager', 'TestSuite/Fixture');
+		return true;
+	}
+
+/**
+ * Map PHPUnit 3/4-era class names onto the modern PSR-4 ones. Older CakePHP 2.x
+ * test files reference these legacy names; aliasing keeps them working under
+ * PHPUnit 6+ without touching every test file.
+ *
+ * @return void
+ */
+	public static function aliasLegacyClasses() {
+		$aliases = [
+			'PHPUnit_Framework_AssertionFailedError' => 'PHPUnit\\Framework\\AssertionFailedError',
+			'PHPUnit_Framework_Constraint_IsAnything' => 'PHPUnit\\Framework\\Constraint\\IsAnything',
+			'PHPUnit_Framework_Constraint_Not' => 'PHPUnit\\Framework\\Constraint\\LogicalNot',
+			'PHPUnit_Framework_Constraint_PCREMatch' => 'PHPUnit\\Framework\\Constraint\\RegularExpression',
+			'PHPUnit_Framework_Error' => 'PHPUnit\\Framework\\Error\\Error',
+			'PHPUnit_Framework_Error_Notice' => 'PHPUnit\\Framework\\Error\\Notice',
+			'PHPUnit_Framework_Error_Warning' => 'PHPUnit\\Framework\\Error\\Warning',
+			'PHPUnit_Framework_MockObject_MockObject' => 'PHPUnit\\Framework\\MockObject\\MockObject',
+			'PHPUnit_Framework_Test' => 'PHPUnit\\Framework\\Test',
+			'PHPUnit_Framework_TestCase' => 'PHPUnit\\Framework\\TestCase',
+			'PHPUnit_Framework_TestResult' => 'PHPUnit\\Framework\\TestResult',
+			'PHPUnit_Framework_TestSuite' => 'PHPUnit\\Framework\\TestSuite',
+			'PHPUnit_Runner_Version' => 'PHPUnit\\Runner\\Version',
+			'PHPUnit_TextUI_ResultPrinter' => 'PHPUnit\\TextUI\\DefaultResultPrinter',
+		];
+		foreach ($aliases as $legacy => $modern) {
+			if (!class_exists($legacy, false) && class_exists($modern)) {
+				class_alias($modern, $legacy);
+			}
+		}
 	}
 
 /**
