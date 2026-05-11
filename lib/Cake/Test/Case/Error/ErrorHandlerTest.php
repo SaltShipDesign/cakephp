@@ -100,8 +100,10 @@ class ErrorHandlerTest extends CakeTestCase {
 		$result = ob_get_clean();
 
 		$this->assertRegExp('/<pre class="cake-error">/', $result);
-		$this->assertRegExp('/<b>Notice<\/b>/', $result);
-		$this->assertRegExp('/variable:\s+wrong/', $result);
+		// PHP 8.0 promoted "Undefined variable" from E_NOTICE to E_WARNING, and
+		// the message body changed from `variable: wrong` to `variable $wrong`.
+		$this->assertRegExp(PHP_VERSION_ID >= 80000 ? '/<b>Warning<\/b>/' : '/<b>Notice<\/b>/', $result);
+		$this->assertRegExp(PHP_VERSION_ID >= 80000 ? '/variable\s+\$wrong/' : '/variable:\s+wrong/', $result);
 	}
 
 /**

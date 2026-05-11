@@ -125,16 +125,24 @@ class DebuggerTest extends CakeTestCase {
 		$result = ob_get_clean();
 
 		$this->assertRegExp('/Undefined variable:?\s+\$?other/', $result);
-		$this->assertRegExp('/Context:/', $result);
+		// PHP 8 removed the $context arg from set_error_handler callbacks
+		// (it has been useless since 7.2). With no context info the Debugger
+		// txt output skips the "Context:" section.
+		if (PHP_VERSION_ID < 80000) {
+			$this->assertRegExp('/Context:/', $result);
+		}
 		$this->assertRegExp('/DebuggerTest::testOutput/i', $result);
 
 		ob_start();
 		Debugger::output('html');
 		$wrong .= '';
 		$result = ob_get_clean();
+		// PHP 8.0 promoted undefined-variable to E_WARNING and changed the
+		// message format from `variable: name` to `variable $name`.
+		$php8 = PHP_VERSION_ID >= 80000;
 		$this->assertRegExp('/<pre class="cake-error">.+<\/pre>/', $result);
-		$this->assertRegExp('/<b>Notice<\/b>/', $result);
-		$this->assertRegExp('/variable:\s+wrong/', $result);
+		$this->assertRegExp($php8 ? '/<b>Warning<\/b>/' : '/<b>Notice<\/b>/', $result);
+		$this->assertRegExp($php8 ? '/variable\s+\$wrong/' : '/variable:\s+wrong/', $result);
 
 		ob_start();
 		Debugger::output('js');
@@ -148,13 +156,17 @@ class DebuggerTest extends CakeTestCase {
 					"\(document\.getElementById\('cakeErr[a-z0-9]+\-trace'\)\.style\.display == 'none'" .
 					" \? '' \: 'none'\);/"
 			),
-			'b' => array(), 'Notice', '/b', ' (8)',
+			'b' => array(), $php8 ? 'Warning' : 'Notice', '/b', $php8 ? ' (2)' : ' (8)',
 		));
 
-		$this->assertRegExp('/Undefined variable:\s+buzz/', $result[1]);
+		$this->assertRegExp($php8 ? '/Undefined variable\s+\$buzz/' : '/Undefined variable:\s+buzz/', $result[1]);
 		$this->assertRegExp('/<a[^>]+>Code/', $result[1]);
-		$this->assertRegExp('/<a[^>]+>Context/', $result[2]);
-		$this->assertContains('$wrong = &#039;&#039;', $result[3], 'Context should be HTML escaped.');
+		// PHP 8 dropped the $context arg from error handlers, so the Debugger
+		// no longer renders a Context section.
+		if (PHP_VERSION_ID < 80000) {
+			$this->assertRegExp('/<a[^>]+>Context/', $result[2]);
+			$this->assertContains('$wrong = &#039;&#039;', $result[3], 'Context should be HTML escaped.');
+		}
 	}
 
 /**
@@ -165,6 +177,10 @@ class DebuggerTest extends CakeTestCase {
 	public function testOutputEncodeDescription() {
 		set_error_handler('Debugger::showError');
 		$this->_restoreError = true;
+		// Earlier tests may have switched Debugger output to 'txt' (which does
+		// not escape context). Force HTML mode — this test is specifically
+		// about HTML-escaping of the error description.
+		Debugger::outputAs('js');
 
 		ob_start();
 		$a = array();
@@ -203,12 +219,15 @@ class DebuggerTest extends CakeTestCase {
 		$foo .= '';
 		$result = ob_get_clean();
 
+		// PHP 8 promoted undefined-var to E_WARNING (code 2) and changed the
+		// message format from `variable: foo` to `variable $foo`.
+		$php8 = PHP_VERSION_ID >= 80000;
 		$data = array(
 			'error' => array(),
-			'code' => array(), '8', '/code',
+			'code' => array(), $php8 ? '2' : '8', '/code',
 			'file' => array(), 'preg:/[^<]+/', '/file',
-			'line' => array(), '' . ((int)__LINE__ - 7), '/line',
-			'preg:/Undefined variable:\s+foo/',
+			'line' => array(), '' . ((int)__LINE__ - 10), '/line',
+			$php8 ? 'preg:/Undefined variable\s+\$foo/' : 'preg:/Undefined variable:\s+foo/',
 			'/error'
 		);
 		$this->assertTags($result, $data, true);
@@ -288,7 +307,9 @@ class DebuggerTest extends CakeTestCase {
 		ob_start();
 		$foo .= '';
 		$result = ob_get_clean();
-		$this->assertContains('Notice: I eated an error', $result);
+		// PHP 8 promoted "Undefined variable" from E_NOTICE to E_WARNING.
+		$expectedLabel = PHP_VERSION_ID >= 80000 ? 'Warning: I eated an error' : 'Notice: I eated an error';
+		$this->assertContains($expectedLabel, $result);
 		$this->assertContains('DebuggerTest.php', $result);
 	}
 
