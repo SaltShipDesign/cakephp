@@ -185,6 +185,13 @@ abstract class CakeTestCase extends TestCase {
 
 		$this->_processExpectedExceptionAnnotations();
 
+		if (!isset($this->_cakeTestServerBackup)) {
+			$this->_cakeTestServerBackup = array(
+				'REQUEST_METHOD' => $_SERVER['REQUEST_METHOD'] ?? null,
+				'HTTPS' => $_SERVER['HTTPS'] ?? null,
+			);
+		}
+
 		if (empty($this->_configure)) {
 			$this->_configure = Configure::read();
 		}
@@ -289,6 +296,16 @@ abstract class CakeTestCase extends TestCase {
 		if (isset($this->_cakeTestExpectedErrorClass)) {
 			restore_error_handler();
 			unset($this->_cakeTestExpectedErrorClass);
+		}
+		if (isset($this->_cakeTestServerBackup)) {
+			foreach ($this->_cakeTestServerBackup as $key => $value) {
+				if ($value === null) {
+					unset($_SERVER[$key]);
+				} else {
+					$_SERVER[$key] = $value;
+				}
+			}
+			unset($this->_cakeTestServerBackup);
 		}
 		parent::tearDown();
 		App::build($this->_pathRestore, App::RESET);
