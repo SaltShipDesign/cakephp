@@ -220,6 +220,7 @@ abstract class CakeTestCase extends TestCase {
 		}
 		if (preg_match('/@expectedException\s+([^\s\*]+)/', $doc, $m)) {
 			$this->expectException($m[1]);
+			$this->_installErrorHandlerForExpectedException($m[1]);
 		}
 		if (preg_match('/@expectedExceptionMessage\s+([^\r\n\*]+)/', $doc, $m)) {
 			$this->expectExceptionMessage(trim($m[1]));
@@ -233,11 +234,62 @@ abstract class CakeTestCase extends TestCase {
 	}
 
 /**
+ * When a test expects PHPUnit_Framework_Error{,_Warning,_Notice}, PHPUnit's
+ * built-in error→exception conversion may not engage because CakePHP installs
+ * its own error handler during bootstrap and PHPUnit's ErrorHandler::register()
+ * refuses to install on top of an existing handler. Install a targeted handler
+ * that throws the expected exception class so the test sees what it expects.
+ *
+ * @param string $exceptionClass The expected exception class from the docblock.
+ * @return void
+ */
+	protected function _installErrorHandlerForExpectedException(string $exceptionClass): void {
+		$expectsPhpError = (
+			strpos($exceptionClass, 'PHPUnit_Framework_Error') === 0 ||
+			strpos($exceptionClass, 'PHPUnit\\Framework\\Error\\') === 0
+		);
+		if (!$expectsPhpError) {
+			return;
+		}
+		$this->_cakeTestExpectedErrorClass = $exceptionClass;
+		set_error_handler(function ($severity, $message, $file, $line) use ($exceptionClass) {
+			if (!($severity & error_reporting())) {
+				return false;
+			}
+			$resolved = $exceptionClass;
+			switch ($severity) {
+				case E_NOTICE:
+				case E_USER_NOTICE:
+				case E_STRICT:
+					$resolved = 'PHPUnit_Framework_Error_Notice';
+					break;
+				case E_WARNING:
+				case E_USER_WARNING:
+					$resolved = 'PHPUnit_Framework_Error_Warning';
+					break;
+				case E_DEPRECATED:
+				case E_USER_DEPRECATED:
+					return false;
+				default:
+					$resolved = 'PHPUnit_Framework_Error';
+			}
+			if (!class_exists($resolved, false)) {
+				$resolved = $exceptionClass;
+			}
+			throw new $resolved($message, $severity, $file, $line);
+		});
+	}
+
+/**
  * teardown any static object changes and restore them.
  *
  * @return void
  */
 	public function tearDown(): void {
+		if (isset($this->_cakeTestExpectedErrorClass)) {
+			restore_error_handler();
+			unset($this->_cakeTestExpectedErrorClass);
+		}
 		parent::tearDown();
 		App::build($this->_pathRestore, App::RESET);
 		if (class_exists('ClassRegistry', false)) {
