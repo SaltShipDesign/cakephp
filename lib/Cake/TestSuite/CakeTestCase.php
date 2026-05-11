@@ -34,6 +34,16 @@ abstract class CakeTestCase extends TestCase {
 	protected $_configure = [];
 
 /**
+ * Pristine values of specific Configure keys captured at the first test setUp.
+ * Used to undo per-test leaks for keys that tests routinely mutate without
+ * restoring (e.g. `debug` written to 0 by a test that then throws via
+ * @expectedException, skipping its own restore).
+ *
+ * @var array|null
+ */
+	protected static $_pristineConfigureKeys = null;
+
+/**
  * Path settings to restore at the end of the test.
  */
 	protected $_pathRestore = [];
@@ -216,6 +226,24 @@ abstract class CakeTestCase extends TestCase {
 			);
 		}
 
+		// Snapshot a couple of routinely-leaked Configure keys ONCE per process.
+		// Tests that write Configure::write('debug', 0) and then throw via
+		// @expectedException skip their own restore, leaking the change into
+		// every subsequent test's `_configure` snapshot. Force-reset those
+		// known-leaky keys to their pristine values BEFORE capturing the
+		// per-test `_configure` so the per-test restore picks up the right
+		// values. Other keys (e.g. Session.handler set via setUpBeforeClass)
+		// are intentionally left alone.
+		if (static::$_pristineConfigureKeys === null) {
+			static::$_pristineConfigureKeys = array(
+				'debug' => Configure::read('debug'),
+			);
+		}
+		foreach (static::$_pristineConfigureKeys as $key => $value) {
+			if ($value !== null) {
+				Configure::write($key, $value);
+			}
+		}
 		if (empty($this->_configure)) {
 			$this->_configure = Configure::read();
 		}
