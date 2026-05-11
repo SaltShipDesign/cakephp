@@ -204,7 +204,10 @@ class ErrorHandler {
  * @return bool true if error was handled
  */
 	public static function handleError($code, $description, $file = null, $line = null, $context = null) {
-		if (error_reporting() === 0) {
+		// PHP 8.0 changed the @ operator: error_reporting() no longer returns 0
+		// under suppression. Test the specific error code against the current
+		// reporting mask instead.
+		if (!($code & error_reporting())) {
 			return false;
 		}
 		list($error, $log) = static::mapErrorCode($code);

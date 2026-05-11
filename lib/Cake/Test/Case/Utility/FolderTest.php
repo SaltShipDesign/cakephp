@@ -873,6 +873,16 @@ class FolderTest extends CakeTestCase {
 		chmod($folder, 0555);
 		chmod($file, 0444);
 
+		// Root (e.g. inside Docker containers) ignores POSIX rwx perms — the
+		// "cannot delete" branch can't be exercised, so skip rather than fail.
+		if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+			@chmod($folder, 0755);
+			@chmod($file, 0644);
+			$cleanup = new Folder($path);
+			$cleanup->delete();
+			$this->markTestSkipped('Running as root; cannot exercise the read-only-perm delete branch.');
+		}
+
 		$Folder = new Folder($folder);
 		$return = $Folder->delete();
 		$this->assertFalse($return);

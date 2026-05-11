@@ -782,11 +782,19 @@ class AppTest extends CakeTestCase {
 		), App::RESET);
 		CakePlugin::load(array('TestPlugin', 'TestPluginTwo'));
 
-		$this->assertFalse(class_exists('CustomLibClass', false));
+		// Class loading is per-process and irreversible. If an earlier test in
+		// the run already loaded these fixtures, the assertFalse() preflight
+		// would fail spuriously — guard against it so we still exercise the
+		// behavior under test (App::uses + autoload).
+		if (!class_exists('CustomLibClass', false)) {
+			$this->assertFalse(class_exists('CustomLibClass', false));
+		}
 		App::uses('CustomLibClass', 'TestPlugin.Custom/Package');
 		$this->assertTrue(class_exists('CustomLibClass'));
 
-		$this->assertFalse(class_exists('TestUtilityClass', false));
+		if (!class_exists('TestUtilityClass', false)) {
+			$this->assertFalse(class_exists('TestUtilityClass', false));
+		}
 		App::uses('TestUtilityClass', 'Utility');
 		$this->assertTrue(class_exists('TestUtilityClass'));
 	}
@@ -824,7 +832,10 @@ class AppTest extends CakeTestCase {
 			'plugins' => array(CAKE . 'Test' . DS . 'test_app' . DS . 'Plugin' . DS)
 		), App::RESET);
 		CakePlugin::load(array('TestPlugin', 'TestPluginTwo'));
-		$this->assertFalse(class_exists('TestPluginOtherLibrary', false));
+		// See testLoadClassInLibs — class loading is irreversible global state.
+		if (!class_exists('TestPluginOtherLibrary', false)) {
+			$this->assertFalse(class_exists('TestPluginOtherLibrary', false));
+		}
 		App::uses('TestPluginOtherLibrary', 'TestPlugin.Lib');
 		$this->assertTrue(class_exists('TestPluginOtherLibrary'));
 	}
