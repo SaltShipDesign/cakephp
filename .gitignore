@@ -9,6 +9,8 @@
 /dist
 /tags
 *.mo
+# Test-suite locale fixtures need their compiled .mo files tracked.
+!/lib/Cake/Test/test_app/Locale/**/*.mo
 
 # IDE and editor specific files #
 #################################
