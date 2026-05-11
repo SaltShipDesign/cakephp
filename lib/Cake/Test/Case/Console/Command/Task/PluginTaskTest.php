@@ -197,7 +197,12 @@ class PluginTaskTest extends CakeTestCase {
  */
 	public function testFindPathNonExistant() {
 		$paths = App::path('plugins');
-		$last = count($paths);
+		// $last is the count of paths that survive findPath()'s is_dir filter.
+		// App::path('plugins') may include paths that don't exist on disk in
+		// this environment (e.g., the configured app/Plugin/ if the skel app
+		// hasn't bootstrapped one) — base the expectation on real existence
+		// rather than the pre-filter count.
+		$last = count(array_filter($paths, 'is_dir'));
 
 		array_unshift($paths, '/fake/path');
 		$paths[] = '/fake/path2';

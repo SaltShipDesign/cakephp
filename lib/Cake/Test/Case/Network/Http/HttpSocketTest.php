@@ -1845,6 +1845,11 @@ class HttpSocketTest extends CakeTestCase {
 		} catch (SocketException $e) {
 			$message = $e->getMessage();
 			$this->skipIf(strpos($message, 'Invalid HTTP') !== false, 'Invalid HTTP Response received, skipping.');
+			// Hostname may be unresolvable in offline test environments — that
+			// failure mode doesn't exercise the cert-verification path under
+			// test, so skip rather than fail.
+			$this->skipIf(strpos($message, 'getaddrinfo') !== false, 'DNS lookup failed; cannot reach the test host.');
+			$this->skipIf(strpos($message, 'Connection refused') !== false, 'Connection refused; cannot reach the test host.');
 			$this->assertContains('Failed to enable crypto', $message);
 		}
 	}

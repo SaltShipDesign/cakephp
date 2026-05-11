@@ -174,6 +174,25 @@ abstract class CakeTestCase extends TestCase {
 	}
 
 /**
+ * Polyfill for assertAttributeCount, removed in PHPUnit 9. Reads a
+ * (possibly protected/private) attribute via reflection and asserts its
+ * count matches.
+ *
+ * @param int $expectedCount
+ * @param string $actualAttributeName
+ * @param object|string $actualClassOrObject
+ * @param string $message
+ * @return void
+ */
+	public static function assertAttributeCount(int $expectedCount, string $actualAttributeName, $actualClassOrObject, string $message = ''): void {
+		$reflection = new \ReflectionClass($actualClassOrObject);
+		$property = $reflection->getProperty($actualAttributeName);
+		$property->setAccessible(true);
+		$actual = is_object($actualClassOrObject) ? $property->getValue($actualClassOrObject) : $property->getValue();
+		static::assertCount($expectedCount, $actual, $message);
+	}
+
+/**
  * Polyfill for assertAttributeEquals, removed in PHPUnit 9.
  * Reads a (possibly protected/private) attribute via reflection and compares.
  *

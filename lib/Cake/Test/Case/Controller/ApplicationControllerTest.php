@@ -59,6 +59,9 @@ class ApplicationControllerTest extends ControllerTestCase {
 	public function setUp(): void {
 		CakeSession::destroy();
 		parent::setUp();
+		// Record the OB level so tearDown can clean any buffers the test
+		// (specifically the testAction redirect path) accidentally leaves open.
+		$this->_obBaseLevel = ob_get_level();
 	}
 
 /**
@@ -67,6 +70,14 @@ class ApplicationControllerTest extends ControllerTestCase {
  * @return void
  */
 	public function tearDown(): void {
+		// Discard any output buffers left open by testAction's redirect path
+		// (CakeRequest::redirect / Dispatcher::dispatch can leave one nested
+		// buffer on the stack which PHPUnit then flags as risky).
+		if (isset($this->_obBaseLevel)) {
+			while (ob_get_level() > $this->_obBaseLevel) {
+				ob_end_clean();
+			}
+		}
 		CakeSession::destroy();
 		parent::tearDown();
 	}

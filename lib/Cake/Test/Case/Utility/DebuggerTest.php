@@ -281,12 +281,14 @@ class DebuggerTest extends CakeTestCase {
 		$foo .= '';
 		$result = ob_get_clean();
 
+		// PHP 8 promoted undefined-var to E_WARNING (code 2).
+		$php8 = PHP_VERSION_ID >= 80000;
 		$data = array(
 			'<error',
-			'<code', '8', '/code',
+			'<code', $php8 ? '2' : '8', '/code',
 			'<file', 'preg:/[^<]+/', '/file',
-			'<line', '' . ((int)__LINE__ - 7), '/line',
-			'preg:/Undefined variable:\s+foo/',
+			'<line', '' . ((int)__LINE__ - 9), '/line',
+			$php8 ? 'preg:/Undefined variable\s+\$foo/' : 'preg:/Undefined variable:\s+foo/',
 			'/error'
 		);
 		$this->assertTags($result, $data, true);
@@ -653,6 +655,11 @@ TEXT;
  * @return void
  */
 	public function testExportVarRecursion() {
+		// PHP 8.1 removed $GLOBALS['GLOBALS'] (the self-reference) — see
+		// https://wiki.php.net/rfc/restrict_globals_usage. Debugger's
+		// recursion detection is hard-coded to that specific key, so on 8.1+
+		// there's nothing to assert here.
+		$this->skipIf(PHP_VERSION_ID >= 80100, '$GLOBALS no longer contains a self-reference on PHP 8.1+.');
 		$output = Debugger::exportVar($GLOBALS);
 		$this->assertContains("'GLOBALS' => [recursion]", $output);
 	}

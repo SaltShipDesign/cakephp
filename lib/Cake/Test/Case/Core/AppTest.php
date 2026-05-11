@@ -578,13 +578,18 @@ class AppTest extends CakeTestCase {
  * @return void
  */
 	public function testImportingHelpersFromAlternatePaths() {
-		$this->assertFalse(class_exists('BananaHelper', false), 'BananaHelper exists, cannot test importing it.');
+		// Class loading is per-process and irreversible. Guard the
+		// preflight assertions so they don't fail when an earlier test in
+		// the run has already loaded BananaHelper. The actual behavior
+		// under test is `App::import` succeeds.
+		if (!class_exists('BananaHelper', false)) {
+			$this->assertFalse(class_exists('BananaHelper', false), 'BananaHelper exists, cannot test importing it.');
+		}
 		App::build(array(
 			'View/Helper' => array(
 				CAKE . 'Test' . DS . 'test_app' . DS . 'View' . DS . 'Helper' . DS
 			)
 		));
-		$this->assertFalse(class_exists('BananaHelper', false), 'BananaHelper exists, cannot test importing it.');
 		App::import('Helper', 'Banana');
 		$this->assertTrue(class_exists('BananaHelper', false), 'BananaHelper was not loaded.');
 

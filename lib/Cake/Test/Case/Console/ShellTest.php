@@ -690,6 +690,10 @@ class ShellTest extends CakeTestCase {
  */
 	public function testCreateFileNoPermissions() {
 		$this->skipIf(DIRECTORY_SEPARATOR === '\\', 'Cant perform operations using permissions on Windows.');
+		$this->skipIf(
+			function_exists('posix_geteuid') && posix_geteuid() === 0,
+			'Running as root; chmod 0444 cannot prevent root from writing.'
+		);
 
 		$path = TMP . 'shell_test';
 		$file = $path . DS . 'no_perms';
