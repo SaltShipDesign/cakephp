@@ -219,10 +219,13 @@ abstract class CakeTestCase extends TestCase {
 
 		$this->_processExpectedExceptionAnnotations();
 
-		if (!isset($this->_cakeTestServerBackup)) {
-			$this->_cakeTestServerBackup = array(
-				'REQUEST_METHOD' => $_SERVER['REQUEST_METHOD'] ?? null,
-				'HTTPS' => $_SERVER['HTTPS'] ?? null,
+		if (!isset($this->_cakeTestSuperglobalBackup)) {
+			$this->_cakeTestSuperglobalBackup = array(
+				'SERVER' => $_SERVER,
+				'POST' => $_POST,
+				'GET' => $_GET,
+				'FILES' => $_FILES,
+				'COOKIE' => $_COOKIE,
 			);
 		}
 
@@ -349,15 +352,13 @@ abstract class CakeTestCase extends TestCase {
 			restore_error_handler();
 			unset($this->_cakeTestExpectedErrorClass);
 		}
-		if (isset($this->_cakeTestServerBackup)) {
-			foreach ($this->_cakeTestServerBackup as $key => $value) {
-				if ($value === null) {
-					unset($_SERVER[$key]);
-				} else {
-					$_SERVER[$key] = $value;
-				}
-			}
-			unset($this->_cakeTestServerBackup);
+		if (isset($this->_cakeTestSuperglobalBackup)) {
+			$_SERVER = $this->_cakeTestSuperglobalBackup['SERVER'];
+			$_POST = $this->_cakeTestSuperglobalBackup['POST'];
+			$_GET = $this->_cakeTestSuperglobalBackup['GET'];
+			$_FILES = $this->_cakeTestSuperglobalBackup['FILES'];
+			$_COOKIE = $this->_cakeTestSuperglobalBackup['COOKIE'];
+			unset($this->_cakeTestSuperglobalBackup);
 		}
 		parent::tearDown();
 		App::build($this->_pathRestore, App::RESET);

@@ -152,6 +152,26 @@ class ShellTest extends CakeTestCase {
 	}
 
 /**
+ * tearDown method
+ *
+ * Clean up the shell_test fixture directory so it doesn't leak into
+ * FolderTest::testFolderRead which reads the tmp directory listing.
+ * testCreateFileNoPermissions deliberately chmods the dir to 0444 to test
+ * the unwritable-path case; chmod back to 0755 here so Folder->delete()
+ * can recurse into it.
+ *
+ * @return void
+ */
+	public function tearDown(): void {
+		parent::tearDown();
+		if (is_dir(TMP . 'shell_test')) {
+			@chmod(TMP . 'shell_test', 0755);
+			$Folder = new Folder(TMP . 'shell_test');
+			$Folder->delete();
+		}
+	}
+
+/**
  * testConstruct method
  *
  * @return void
