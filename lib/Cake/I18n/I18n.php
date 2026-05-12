@@ -391,6 +391,17 @@ class I18n {
 		$searchPaths = App::path('locales');
 		$plugins = CakePlugin::loaded();
 
+		// Defensive: ensure $_domains[$domain][$_lang] is an array before any
+		// `$_domains[$domain][$_lang][$category] = …` assignments below.
+		// PHP 8.1+ otherwise emits "Automatic conversion of false to array"
+		// when the slot was populated from a Cache::read() miss.
+		if (!isset($this->_domains[$domain][$this->_lang]) ||
+			$this->_domains[$domain][$this->_lang] === false ||
+			$this->_domains[$domain][$this->_lang] === null
+		) {
+			$this->_domains[$domain][$this->_lang] = array();
+		}
+
 		if (!empty($plugins)) {
 			foreach ($plugins as $plugin) {
 				$pluginDomain = Inflector::underscore($plugin);

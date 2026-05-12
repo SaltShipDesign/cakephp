@@ -68,7 +68,21 @@ class CakeTestSuiteCommand extends Command {
 		try {
 			$runner->run($suite, $this->arguments, $exit);
 		} catch (Throwable $t) {
-			print $t->getMessage() . PHP_EOL;
+			// Surface the full diagnostic (type, file, line, trace) on STDERR.
+			// Previously this catch printed only ->getMessage() on STDOUT,
+			// which made fixture-setup aborts and other deep-stack errors
+			// effectively invisible from the test runner. Set CAKE_TEST_QUIET
+			// in the env to opt back into the legacy behavior.
+			if (getenv('CAKE_TEST_QUIET')) {
+				print $t->getMessage() . PHP_EOL;
+			} else {
+				fwrite(STDERR, "\n[CakeTestSuiteCommand] uncaught " . get_class($t) . ": " . $t->getMessage() . "\n");
+				fwrite(STDERR, "  at " . $t->getFile() . ":" . $t->getLine() . "\n");
+				fwrite(STDERR, $t->getTraceAsString() . "\n");
+				if ($t->getPrevious()) {
+					fwrite(STDERR, "Caused by: " . (string)$t->getPrevious() . "\n");
+				}
+			}
 		}
 
 		$return = TestRunner::FAILURE_EXIT;

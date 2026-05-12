@@ -231,9 +231,29 @@ class CakeFixtureManager {
 				$fixture = $this->_loaded[$f];
 				$db = ConnectionManager::getDataSource($fixture->useDbConfig);
 				$db->begin();
-				$this->_setupTable($fixture, $db, $test->dropTables);
-				$fixture->insert($db);
-				$db->commit();
+				try {
+					$this->_setupTable($fixture, $db, $test->dropTables);
+					$fixture->insert($db);
+					$db->commit();
+				} catch (Exception $e) {
+					// Surface the real failure point. Without this catch, a
+					// throw between begin() and commit() leaves the
+					// transaction open (and on MariaDB/MySQL where DDL like
+					// CREATE TABLE auto-commits, a subsequent rollback() in
+					// tearDown emits "There is no active transaction"
+					// instead of the original error). Roll back what we can,
+					// log on STDERR, and rethrow so the test runner sees it.
+					fwrite(STDERR, "\n[CakeFixtureManager::load] " . get_class($e) . " loading fixture '" . get_class($fixture) . "' (table '" . $fixture->table . "'): " . $e->getMessage() . "\n");
+					fwrite(STDERR, "  at " . $e->getFile() . ":" . $e->getLine() . "\n");
+					try {
+						$db->rollback();
+					} catch (Exception $rbErr) {
+						// Best-effort. MariaDB will say "no active
+						// transaction" if a DDL already implicitly
+						// committed — that's fine.
+					}
+					throw $e;
+				}
 			}
 		}
 	}

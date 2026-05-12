@@ -91,7 +91,10 @@ class ConsoleInputOption {
 			$this->_default = $default;
 			$this->_choices = $choices;
 		}
-		if (strlen($this->_short) > 1) {
+		// $short is optional (defaults to null) and `strlen(null)` is
+		// deprecated on PHP 8.1+. Coerce for the length check without
+		// changing observable behavior — null and '' both mean "no short".
+		if (strlen((string)$this->_short) > 1) {
 			throw new ConsoleException(
 				__d('cake_console', 'Short option "%s" is invalid, short options must be one letter.', $this->_short)
 			);

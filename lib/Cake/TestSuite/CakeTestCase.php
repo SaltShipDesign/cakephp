@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestResult;
 App::uses('CakeFixtureManager', 'TestSuite/Fixture');
 App::uses('CakeTestFixture', 'TestSuite/Fixture');
 
+#[\AllowDynamicProperties]
 abstract class CakeTestCase extends TestCase {
 
 /**

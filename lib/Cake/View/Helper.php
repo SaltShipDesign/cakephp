@@ -24,6 +24,7 @@ App::uses('Inflector', 'Utility');
  *
  * @package       Cake.View
  */
+#[\AllowDynamicProperties]
 class Helper extends CakeObject {
 
 /**
