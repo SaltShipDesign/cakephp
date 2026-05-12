@@ -2462,7 +2462,18 @@ class DboSource extends DataSource {
 				$this->logQuery('COMMIT');
 			}
 			$this->_transactionStarted = false;
-			return $this->_connection->commit();
+			try {
+				return $this->_connection->commit();
+			} catch (PDOException $e) {
+				// MariaDB/MySQL: DDL (CREATE/DROP TABLE) implicitly
+				// commits the in-flight transaction. PDO then refuses
+				// the explicit commit with "no active transaction".
+				// Nothing to commit — treat as success.
+				if (strpos($e->getMessage(), 'no active transaction') !== false) {
+					return true;
+				}
+				throw $e;
+			}
 		}
 
 		if ($this->nestedTransactionSupported()) {
@@ -2506,7 +2517,21 @@ class DboSource extends DataSource {
 				$this->logQuery('ROLLBACK');
 			}
 			$this->_transactionStarted = false;
-			return $this->_connection->rollBack();
+			try {
+				return $this->_connection->rollBack();
+			} catch (PDOException $e) {
+				// MariaDB/MySQL: DDL (CREATE/DROP TABLE) implicitly
+				// commits the in-flight transaction. The DBO's
+				// _transactionStarted flag can be true while PDO no
+				// longer sees a transaction. Treat as a successful
+				// rollback — there is nothing to undo. Critical for
+				// shutdown destructors where an uncaught throw becomes
+				// a fatal error.
+				if (strpos($e->getMessage(), 'no active transaction') !== false) {
+					return true;
+				}
+				throw $e;
+			}
 		}
 
 		if ($this->nestedTransactionSupported()) {
