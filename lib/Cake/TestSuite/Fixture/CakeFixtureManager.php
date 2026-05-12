@@ -24,6 +24,7 @@ App::uses('ClassRegistry', 'Utility');
  *
  * @package       Cake.TestSuite.Fixture
  */
+#[\AllowDynamicProperties]
 class CakeFixtureManager {
 
 /**
@@ -229,10 +230,34 @@ class CakeFixtureManager {
 			if (!empty($this->_loaded[$f])) {
 				$fixture = $this->_loaded[$f];
 				$db = ConnectionManager::getDataSource($fixture->useDbConfig);
-				$db->begin();
-				$this->_setupTable($fixture, $db, $test->dropTables);
-				$fixture->insert($db);
-				$db->commit();
+				try {
+					// DDL (CREATE/DROP TABLE) must run OUTSIDE the transaction.
+					// On MySQL/MariaDB, DDL implicitly commits the in-flight
+					// transaction, so wrapping it in begin/commit leaves the
+					// trailing commit() firing against no transaction and
+					// PDO throws "There is no active transaction".
+					$this->_setupTable($fixture, $db, $test->dropTables);
+					$db->begin();
+					$fixture->insert($db);
+					$db->commit();
+				} catch (Exception $e) {
+					// Surface the real failure point. Without this catch, a
+					// throw inside the begin/commit window leaves the
+					// transaction open and a subsequent rollback() in tearDown
+					// emits "There is no active transaction" instead of the
+					// original error. Roll back what we can, log on STDERR,
+					// and rethrow so the test runner sees it.
+					fwrite(STDERR, "\n[CakeFixtureManager::load] " . get_class($e) . " loading fixture '" . get_class($fixture) . "' (table '" . $fixture->table . "'): " . $e->getMessage() . "\n");
+					fwrite(STDERR, "  at " . $e->getFile() . ":" . $e->getLine() . "\n");
+					try {
+						$db->rollback();
+					} catch (Exception $rbErr) {
+						// Best-effort. MariaDB will say "no active
+						// transaction" if a DDL already implicitly
+						// committed — that's fine.
+					}
+					throw $e;
+				}
 			}
 		}
 	}

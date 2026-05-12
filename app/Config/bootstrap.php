@@ -22,6 +22,10 @@
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 
+if (file_exists(dirname(dirname(__DIR__)) . '/vendors/autoload.php')) {
+	require dirname(dirname(__DIR__)) . '/vendors/autoload.php';
+}
+
 // Setup a 'default' cache configuration for use in the application.
 Cache::config('default', array('engine' => 'File'));
 

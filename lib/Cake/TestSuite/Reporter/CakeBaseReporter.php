@@ -15,16 +15,18 @@
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 
-if (!class_exists('PHPUnit_TextUI_ResultPrinter')) {
-	require_once 'PHPUnit/TextUI/ResultPrinter.php';
-}
-
 /**
- * CakeBaseReporter contains common reporting features used in the CakePHP Test suite
+ * CakeBaseReporter contains common reporting features used in the CakePHP Test suite.
+ *
+ * Historically extended PHPUnit_TextUI_ResultPrinter. PHPUnit 9's
+ * DefaultResultPrinter is strictly typed (void return types on every override),
+ * which broke ~30+ test classes that mock CakeHtmlReporter. We decouple here
+ * because CakeBaseReporter is only used by the legacy web test runner, not by
+ * the CLI path that the test suite actually runs through.
  *
  * @package       Cake.TestSuite.Reporter
  */
-class CakeBaseReporter extends PHPUnit_TextUI_ResultPrinter {
+class CakeBaseReporter {
 
 /**
  * Headers sent

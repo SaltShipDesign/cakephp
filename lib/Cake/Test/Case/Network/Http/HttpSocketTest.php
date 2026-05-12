@@ -188,7 +188,7 @@ class HttpSocketTest extends CakeTestCase {
  *
  * @return void
  */
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		$this->Socket = $this->getMock('TestHttpSocket', array('read', 'write', 'connect'));
 		$this->RequestSocket = $this->getMock('TestHttpSocket', array('read', 'write', 'connect', 'request'));
@@ -199,7 +199,7 @@ class HttpSocketTest extends CakeTestCase {
  *
  * @return void
  */
-	public function tearDown() {
+	public function tearDown(): void {
 		parent::tearDown();
 		unset($this->Socket, $this->RequestSocket);
 	}
@@ -1845,6 +1845,11 @@ class HttpSocketTest extends CakeTestCase {
 		} catch (SocketException $e) {
 			$message = $e->getMessage();
 			$this->skipIf(strpos($message, 'Invalid HTTP') !== false, 'Invalid HTTP Response received, skipping.');
+			// Hostname may be unresolvable in offline test environments — that
+			// failure mode doesn't exercise the cert-verification path under
+			// test, so skip rather than fail.
+			$this->skipIf(strpos($message, 'getaddrinfo') !== false, 'DNS lookup failed; cannot reach the test host.');
+			$this->skipIf(strpos($message, 'Connection refused') !== false, 'Connection refused; cannot reach the test host.');
 			$this->assertContains('Failed to enable crypto', $message);
 		}
 	}

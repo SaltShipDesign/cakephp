@@ -352,7 +352,7 @@ class Security {
 		// Generate the encryption and hmac key.
 		$key = substr(hash('sha256', $key . $hmacSalt), 0, 32);
 
-		if (Configure::read('Security.useOpenSsl')) {
+		if (static::_useOpenSsl()) {
 			$method = 'AES-256-CBC';
 			$ivSize = openssl_cipher_iv_length($method);
 			$iv = openssl_random_pseudo_bytes($ivSize);
@@ -372,6 +372,23 @@ class Security {
 
 		$hmac = hash_hmac('sha256', $ciphertext, $key);
 		return $hmac . $ciphertext;
+	}
+
+/**
+ * Resolve the encryption backend choice. Reads `Security.useOpenSsl`. If the
+ * config value is unset (null), default to openssl whenever the mcrypt
+ * extension is missing — which it is on PHP 7.2+ unless someone built it
+ * manually. Existing code that explicitly sets the flag (true OR false) is
+ * unchanged.
+ *
+ * @return bool
+ */
+	protected static function _useOpenSsl() {
+		$configured = Configure::read('Security.useOpenSsl');
+		if ($configured !== null) {
+			return (bool)$configured;
+		}
+		return !function_exists('mcrypt_get_iv_size');
 	}
 
 /**
@@ -419,7 +436,7 @@ class Security {
 			return false;
 		}
 
-		if (Configure::read('Security.useOpenSsl')) {
+		if (static::_useOpenSsl()) {
 			$method = 'AES-256-CBC';
 			$ivSize = openssl_cipher_iv_length($method);
 			$iv = substr($cipher, 0, $ivSize);

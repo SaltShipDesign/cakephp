@@ -159,7 +159,7 @@ class SecurityComponentTest extends CakeTestCase {
  *
  * @return void
  */
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 
 		$request = $this->getMock('CakeRequest', array('here'), array('posts/index', false));
@@ -183,7 +183,7 @@ class SecurityComponentTest extends CakeTestCase {
  *
  * @return void
  */
-	public function tearDown() {
+	public function tearDown(): void {
 		parent::tearDown();
 		$this->Controller->Session->delete('_Token');
 		$this->Controller->Session->destroy();
@@ -1488,7 +1488,7 @@ class SecurityComponentTest extends CakeTestCase {
 		$this->Security->startup($this->Controller);
 		$tokens = $this->Security->Session->read('_Token.csrfTokens');
 		$this->assertEquals(2, count($tokens), 'Too many tokens left behind');
-		$this->assertNotEmpty('valid', $tokens, 'Valid token was removed.');
+		$this->assertArrayHasKey('valid', $tokens, 'Valid token was removed.');
 	}
 
 /**

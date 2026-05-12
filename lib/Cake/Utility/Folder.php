@@ -20,6 +20,7 @@
  *
  * @package       Cake.Utility
  */
+#[\AllowDynamicProperties]
 class Folder {
 
 /**
@@ -226,10 +227,10 @@ class Folder {
 		}
 
 		if ($dirs) {
-			$dirs = call_user_func_array('array_merge', $dirs);
+			$dirs = call_user_func_array('array_merge', array_values($dirs));
 		}
 		if ($files) {
-			$files = call_user_func_array('array_merge', $files);
+			$files = call_user_func_array('array_merge', array_values($files));
 		}
 		return array($dirs, $files);
 	}

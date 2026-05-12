@@ -137,7 +137,7 @@ class ShellTest extends CakeTestCase {
  *
  * @return void
  */
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 
 		$output = $this->getMock('ConsoleOutput', array(), array(), '', false);
@@ -146,6 +146,26 @@ class ShellTest extends CakeTestCase {
 		$this->Shell = new ShellTestShell($output, $error, $in);
 
 		if (is_dir(TMP . 'shell_test')) {
+			$Folder = new Folder(TMP . 'shell_test');
+			$Folder->delete();
+		}
+	}
+
+/**
+ * tearDown method
+ *
+ * Clean up the shell_test fixture directory so it doesn't leak into
+ * FolderTest::testFolderRead which reads the tmp directory listing.
+ * testCreateFileNoPermissions deliberately chmods the dir to 0444 to test
+ * the unwritable-path case; chmod back to 0755 here so Folder->delete()
+ * can recurse into it.
+ *
+ * @return void
+ */
+	public function tearDown(): void {
+		parent::tearDown();
+		if (is_dir(TMP . 'shell_test')) {
+			@chmod(TMP . 'shell_test', 0755);
 			$Folder = new Folder(TMP . 'shell_test');
 			$Folder->delete();
 		}
@@ -670,6 +690,10 @@ class ShellTest extends CakeTestCase {
  */
 	public function testCreateFileNoPermissions() {
 		$this->skipIf(DIRECTORY_SEPARATOR === '\\', 'Cant perform operations using permissions on Windows.');
+		$this->skipIf(
+			function_exists('posix_geteuid') && posix_geteuid() === 0,
+			'Running as root; chmod 0444 cannot prevent root from writing.'
+		);
 
 		$path = TMP . 'shell_test';
 		$file = $path . DS . 'no_perms';

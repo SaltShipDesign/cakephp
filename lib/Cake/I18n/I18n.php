@@ -26,6 +26,7 @@ App::uses('CakeSession', 'Model/Datasource');
  *
  * @package       Cake.I18n
  */
+#[\AllowDynamicProperties]
 class I18n {
 
 /**
@@ -235,6 +236,14 @@ class I18n {
 			$_this->_domains[$domain][$_this->_lang] = Cache::read($_this->domain, '_cake_core_');
 		}
 
+		// Cache::read returns `false` on a miss. PHP 8.1 emits a deprecation
+		// when an array offset is read off a bool — normalize to an empty
+		// array so the subsequent isset/empty/offset reads stay quiet, and
+		// `_bindTextDomain` gets called the same way it would on a miss.
+		if ($_this->_domains[$domain][$_this->_lang] === false) {
+			$_this->_domains[$domain][$_this->_lang] = array();
+		}
+
 		if (!isset($_this->_domains[$domain][$_this->_lang][$_this->category])) {
 			$_this->_bindTextDomain($domain);
 			Cache::write($_this->domain, $_this->_domains[$domain][$_this->_lang], '_cake_core_');
@@ -381,6 +390,17 @@ class I18n {
 		$merge = array();
 		$searchPaths = App::path('locales');
 		$plugins = CakePlugin::loaded();
+
+		// Defensive: ensure $_domains[$domain][$_lang] is an array before any
+		// `$_domains[$domain][$_lang][$category] = …` assignments below.
+		// PHP 8.1+ otherwise emits "Automatic conversion of false to array"
+		// when the slot was populated from a Cache::read() miss.
+		if (!isset($this->_domains[$domain][$this->_lang]) ||
+			$this->_domains[$domain][$this->_lang] === false ||
+			$this->_domains[$domain][$this->_lang] === null
+		) {
+			$this->_domains[$domain][$this->_lang] = array();
+		}
 
 		if (!empty($plugins)) {
 			foreach ($plugins as $plugin) {

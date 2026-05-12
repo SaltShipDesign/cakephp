@@ -29,7 +29,7 @@ class ConnectionManagerTest extends CakeTestCase {
  *
  * @return void
  */
-	public function tearDown() {
+	public function tearDown(): void {
 		parent::tearDown();
 		CakePlugin::unload();
 	}
@@ -181,7 +181,7 @@ class ConnectionManagerTest extends CakeTestCase {
 		ConnectionManager::getDataSource('test');
 		$sources = ConnectionManager::sourceList();
 		$this->assertTrue(count($sources) >= 1);
-		$this->assertTrue(in_array('test', array_keys($sources)));
+		$this->assertTrue(in_array('test', $sources, true));
 	}
 
 /**

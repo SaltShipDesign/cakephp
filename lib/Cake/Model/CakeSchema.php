@@ -85,7 +85,10 @@ class CakeSchema extends CakeObject {
 			$this->plugin = $options['plugin'];
 		}
 
-		if (strtolower($this->name) === 'cake') {
+		// $this->name defaults to null and can stay null if $options['name']
+		// is provided (the `if (empty($options['name']))` branch above is
+		// skipped). `strtolower(null)` is deprecated on PHP 8.1+.
+		if (strtolower((string)$this->name) === 'cake') {
 			$this->name = 'App';
 		}
 

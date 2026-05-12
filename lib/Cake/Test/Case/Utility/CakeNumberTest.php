@@ -31,7 +31,7 @@ class CakeNumberTest extends CakeTestCase {
  *
  * @return void
  */
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		$this->Number = new CakeNumber();
 	}
@@ -41,7 +41,7 @@ class CakeNumberTest extends CakeTestCase {
  *
  * @return void
  */
-	public function tearDown() {
+	public function tearDown(): void {
 		parent::tearDown();
 		unset($this->Number);
 	}
@@ -343,7 +343,9 @@ class CakeNumberTest extends CakeTestCase {
 			'places' => 2,
 			'decimal' => '.'
 		));
-		$this->assertEquals('0.2', $result);
+		// With an empty currency and the default fractionSymbol=false, the
+		// fraction branch is skipped — format() honors places=2 strictly.
+		$this->assertEquals('0.20', $result);
 	}
 
 /**

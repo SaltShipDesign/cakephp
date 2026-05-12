@@ -2,13 +2,20 @@
 #################################################
 /app/Config/database.php
 /app/tmp
-/lib/Cake/Console/Templates/skel/tmp/
+# Skel tmp/ should only track `empty` placeholders + the error.log scaffold —
+# ignore everything else, but re-include the placeholders we need so
+# `cake bake project` produces a complete tmp/ tree. (git can't re-include
+# files under an ignored DIRECTORY, so we ignore by glob pattern instead.)
+/lib/Cake/Console/Templates/skel/tmp/cache/persistent/myapp_*
+/lib/Cake/Console/Templates/skel/tmp/**/*.log
 /plugins
 /vendors
 /build
 /dist
 /tags
 *.mo
+# Test-suite locale fixtures need their compiled .mo files tracked.
+!/lib/Cake/Test/test_app/Locale/**/*.mo
 
 # IDE and editor specific files #
 #################################

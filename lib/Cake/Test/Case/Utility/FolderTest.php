@@ -33,7 +33,7 @@ class FolderTest extends CakeTestCase {
  *
  * @return void
  */
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		$dirs = array('cache', 'logs', 'sessions', 'tests');
 		foreach ($dirs as $dir) {
 			new Folder(TMP . $dir, true);
@@ -51,7 +51,7 @@ class FolderTest extends CakeTestCase {
  *
  * @return void
  */
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		clearstatcache();
 	}
@@ -61,7 +61,7 @@ class FolderTest extends CakeTestCase {
  *
  * @return void
  */
-	public function tearDown() {
+	public function tearDown(): void {
 		$exclude = array_merge(static::$_tmp, array('.', '..'));
 		foreach (scandir(TMP) as $dir) {
 			if (is_dir(TMP . $dir) && !in_array($dir, $exclude)) {
@@ -872,6 +872,16 @@ class FolderTest extends CakeTestCase {
 
 		chmod($folder, 0555);
 		chmod($file, 0444);
+
+		// Root (e.g. inside Docker containers) ignores POSIX rwx perms — the
+		// "cannot delete" branch can't be exercised, so skip rather than fail.
+		if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+			@chmod($folder, 0755);
+			@chmod($file, 0644);
+			$cleanup = new Folder($path);
+			$cleanup->delete();
+			$this->markTestSkipped('Running as root; cannot exercise the read-only-perm delete branch.');
+		}
 
 		$Folder = new Folder($folder);
 		$return = $Folder->delete();

@@ -20,6 +20,7 @@
  *
  * @package       Cake.Network.Http
  */
+#[\AllowDynamicProperties]
 class HttpSocketResponse implements ArrayAccess {
 
 /**
@@ -389,6 +390,7 @@ class HttpSocketResponse implements ArrayAccess {
  * @param string $offset Offset to check.
  * @return bool
  */
+	#[\ReturnTypeWillChange]
 	public function offsetExists($offset) {
 		return in_array($offset, array('raw', 'status', 'header', 'body', 'cookies'));
 	}
@@ -399,6 +401,7 @@ class HttpSocketResponse implements ArrayAccess {
  * @param string $offset Offset to get.
  * @return mixed
  */
+	#[\ReturnTypeWillChange]
 	public function offsetGet($offset) {
 		switch ($offset) {
 			case 'raw':
@@ -437,6 +440,7 @@ class HttpSocketResponse implements ArrayAccess {
  * @param mixed $value Value.
  * @return void
  */
+	#[\ReturnTypeWillChange]
 	public function offsetSet($offset, $value) {
 	}
 
@@ -446,6 +450,7 @@ class HttpSocketResponse implements ArrayAccess {
  * @param string $offset Offset to unset.
  * @return void
  */
+	#[\ReturnTypeWillChange]
 	public function offsetUnset($offset) {
 	}
 

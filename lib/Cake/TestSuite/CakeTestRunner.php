@@ -1,26 +1,60 @@
 <?php
 
 use PHPUnit\Runner\BaseTestRunner;
+use PHPUnit\Runner\TestSuiteLoader;
 use PHPUnit\TextUI\TestRunner;
 use PHPUnit\Framework\Test;
 use PHPUnit\Framework\TestResult;
 
+App::uses('CakeTestLoader', 'TestSuite');
 App::uses('CakeFixtureManager', 'TestSuite/Fixture');
 
 class CakeTestRunner extends BaseTestRunner {
 
 	public $testRunner;
 	protected $_params;
+	protected $_loaderClass;
 
 /**
  * Lets us pass in some options needed for CakePHP's webrunner.
  *
- * @param mixed $loader The test suite loader
+ * @param mixed $loader The test suite loader class name (string).
  * @param array $params list of options to be used for this run
  */
 	public function __construct($loader, array $params = []) {
 		$this->_params = $params;
-		$this->testRunner = new TestRunner($loader, null);
+		if (is_string($loader) && $loader !== '' && class_exists($loader)) {
+			$this->_loaderClass = $loader;
+		} else {
+			$this->_loaderClass = 'CakeTestLoader';
+		}
+		$loaderInstance = null;
+		if ($loader instanceof TestSuiteLoader) {
+			$loaderInstance = $loader;
+		} elseif (class_exists($this->_loaderClass)) {
+			$tmp = new $this->_loaderClass;
+			if ($tmp instanceof TestSuiteLoader) {
+				$loaderInstance = $tmp;
+			}
+		}
+		$this->testRunner = new TestRunner($loaderInstance, null);
+	}
+
+/**
+ * Override BaseTestRunner::getLoader() so PHPUnit's getTest() uses
+ * CakePHP's loader (which understands legacy class naming) instead of
+ * StandardTestSuiteLoader.
+ *
+ * @return TestSuiteLoader
+ */
+	public function getLoader(): TestSuiteLoader {
+		if ($this->_loaderClass && class_exists($this->_loaderClass)) {
+			$loader = new $this->_loaderClass;
+			if ($loader instanceof TestSuiteLoader) {
+				return $loader;
+			}
+		}
+		return parent::getLoader();
 	}
 
 /**

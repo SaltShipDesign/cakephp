@@ -822,7 +822,15 @@ class PaginatorHelper extends AppHelper {
 			if ($last && $end < $params['pageCount']) {
 				$lastPage = is_int($last) ? $last : 0;
 				$offset = ($params['pageCount'] < $end + $lastPage) ? $params['pageCount'] - $end : $last;
-				if ($offset <= $lastPage && $params['pageCount'] - $end > $lastPage) {
+				// When $last is a label string (e.g. 'last' from numbers(true)),
+				// $offset is a non-numeric string. PHP 7 compared "last" <= 0
+				// as 0 <= 0 (true); PHP 8.0 changed string-to-int comparison so
+				// the same expression is now false, flipping the branch and
+				// emitting a duplicate separator before the link. Treat
+				// non-numeric offsets as taking the no-before-override branch.
+				$inFirstBranch = !is_numeric($offset)
+					|| ($offset <= $lastPage && $params['pageCount'] - $end > $lastPage);
+				if ($inFirstBranch) {
 					$out .= $this->last($offset, compact('tag', 'separator', 'ellipsis', 'class'));
 				} else {
 					$out .= $this->last($offset, compact('tag', 'separator', 'class', 'ellipsis') + array('before' => $separator));

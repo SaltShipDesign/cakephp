@@ -22,6 +22,7 @@ App::uses('CakeSchema', 'Model');
  *
  * @package       Cake.TestSuite.Fixture
  */
+#[\AllowDynamicProperties]
 class CakeTestFixture {
 
 /**
@@ -242,6 +243,13 @@ class CakeTestFixture {
 			);
 			CakeLog::error($msg);
 			trigger_error($msg, E_USER_WARNING);
+			// Surface the underlying DB error on STDERR — the test runner's
+			// outer catch only printed ->getMessage() and the trigger_error
+			// above can be muted by error_reporting. Without this, fixture
+			// failures inside an enclosing transaction look like a silent
+			// "no active transaction" later at rollback time.
+			fwrite(STDERR, "\n[CakeTestFixture::create] " . get_class($e) . " on table '" . $this->table . "': " . $e->getMessage() . "\n");
+			fwrite(STDERR, "  at " . $e->getFile() . ":" . $e->getLine() . "\n");
 			return false;
 		}
 		return true;
@@ -263,6 +271,9 @@ class CakeTestFixture {
 			$db->execute($db->dropSchema($this->Schema), array('log' => false));
 			$this->created = array_diff($this->created, array($db->configKeyName));
 		} catch (Exception $e) {
+			// Don't fail the run — DROP is best-effort — but at least surface
+			// what happened so the diagnostic trail isn't blank.
+			fwrite(STDERR, "\n[CakeTestFixture::drop] " . get_class($e) . " on table '" . $this->table . "': " . $e->getMessage() . "\n");
 			return false;
 		}
 		return true;

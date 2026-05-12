@@ -52,7 +52,7 @@ class ErrorHandlerTest extends CakeTestCase {
  *
  * @return void
  */
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		App::build(array(
 			'View' => array(
@@ -75,7 +75,7 @@ class ErrorHandlerTest extends CakeTestCase {
  *
  * @return void
  */
-	public function tearDown() {
+	public function tearDown(): void {
 		parent::tearDown();
 		if ($this->_restoreError) {
 			restore_error_handler();
@@ -100,8 +100,10 @@ class ErrorHandlerTest extends CakeTestCase {
 		$result = ob_get_clean();
 
 		$this->assertRegExp('/<pre class="cake-error">/', $result);
-		$this->assertRegExp('/<b>Notice<\/b>/', $result);
-		$this->assertRegExp('/variable:\s+wrong/', $result);
+		// PHP 8.0 promoted "Undefined variable" from E_NOTICE to E_WARNING, and
+		// the message body changed from `variable: wrong` to `variable $wrong`.
+		$this->assertRegExp(PHP_VERSION_ID >= 80000 ? '/<b>Warning<\/b>/' : '/<b>Notice<\/b>/', $result);
+		$this->assertRegExp(PHP_VERSION_ID >= 80000 ? '/variable\s+\$wrong/' : '/variable:\s+wrong/', $result);
 	}
 
 /**
@@ -160,8 +162,14 @@ class ErrorHandlerTest extends CakeTestCase {
 	public function testHandleErrorDebugOff() {
 		Configure::write('debug', 0);
 		Configure::write('Error.trace', false);
-		if (file_exists(LOGS . 'debug.log')) {
-			unlink(LOGS . 'debug.log');
+		// PHP 8.0 promoted "Undefined variable" from E_NOTICE to E_WARNING.
+		// Cake routes E_NOTICE -> debug.log and E_WARNING -> error.log.
+		$logFile = PHP_VERSION_ID >= 80000 ? LOGS . 'error.log' : LOGS . 'debug.log';
+		$logRegex = PHP_VERSION_ID >= 80000
+			? '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (Warning|Error): Warning \(2\): Undefined variable:?\s+\$?out in \[.+ line \d+\]$/'
+			: '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (Notice|Debug): Notice \(8\): Undefined variable:\s+out in \[.+ line \d+\]$/';
+		if (file_exists($logFile)) {
+			unlink($logFile);
 		}
 
 		set_error_handler('ErrorHandler::handleError');
@@ -169,14 +177,14 @@ class ErrorHandlerTest extends CakeTestCase {
 
 		$out .= '';
 
-		$result = file(LOGS . 'debug.log');
+		$result = file($logFile);
 		$this->assertEquals(1, count($result));
 		$this->assertRegExp(
-			'/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (Notice|Debug): Notice \(8\): Undefined variable:\s+out in \[.+ line \d+\]$/',
+			$logRegex,
 			$result[0]
 		);
-		if (file_exists(LOGS . 'debug.log')) {
-			unlink(LOGS . 'debug.log');
+		if (file_exists($logFile)) {
+			unlink($logFile);
 		}
 	}
 
@@ -188,8 +196,13 @@ class ErrorHandlerTest extends CakeTestCase {
 	public function testHandleErrorLoggingTrace() {
 		Configure::write('debug', 0);
 		Configure::write('Error.trace', true);
-		if (file_exists(LOGS . 'debug.log')) {
-			unlink(LOGS . 'debug.log');
+		// See testHandleErrorDebugOff for the PHP 8 E_NOTICE→E_WARNING shift.
+		$logFile = PHP_VERSION_ID >= 80000 ? LOGS . 'error.log' : LOGS . 'debug.log';
+		$logRegex = PHP_VERSION_ID >= 80000
+			? '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (Warning|Error): Warning \(2\): Undefined variable:?\s+\$?out in \[.+ line \d+\]$/'
+			: '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (Notice|Debug): Notice \(8\): Undefined variable:\s+out in \[.+ line \d+\]$/';
+		if (file_exists($logFile)) {
+			unlink($logFile);
 		}
 
 		set_error_handler('ErrorHandler::handleError');
@@ -197,15 +210,15 @@ class ErrorHandlerTest extends CakeTestCase {
 
 		$out .= '';
 
-		$result = file(LOGS . 'debug.log');
+		$result = file($logFile);
 		$this->assertRegExp(
-			'/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (Notice|Debug): Notice \(8\): Undefined variable:\s+out in \[.+ line \d+\]$/',
+			$logRegex,
 			$result[0]
 		);
 		$this->assertRegExp('/^Trace:/', $result[1]);
 		$this->assertRegExp('/^ErrorHandlerTest\:\:testHandleErrorLoggingTrace\(\)/', $result[3]);
-		if (file_exists(LOGS . 'debug.log')) {
-			unlink(LOGS . 'debug.log');
+		if (file_exists($logFile)) {
+			unlink($logFile);
 		}
 	}
 

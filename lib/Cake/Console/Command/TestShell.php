@@ -281,9 +281,36 @@ class TestShell extends Shell {
 
 		$testCli = new CakeTestSuiteCommand('CakeTestLoader', $runnerArgs);
 		$testCli->run(array_merge(
-			[$options],
-			['--bootstrap', 'Test/bootstrap.php', $runnerArgs['case']],
+			$options,
+			[$this->_resolveCaseToFile($runnerArgs)],
 		));
+	}
+
+/**
+ * Resolve a case name (e.g. 'AllTests', 'Core/CakeObject') to its test file path.
+ *
+ * @param array $runnerArgs Parsed runner args from _parseArgs.
+ * @return string Absolute path to the test case .php file.
+ * @throws Exception
+ */
+	protected function _resolveCaseToFile(array $runnerArgs): string {
+		$case = $runnerArgs['case'];
+		if (substr($case, -4) === '.php' && file_exists($case)) {
+			return $case;
+		}
+		if (!empty($runnerArgs['core'])) {
+			$file = CAKE . 'Test' . DS . 'Case' . DS . str_replace('/', DS, $case) . 'Test.php';
+		} elseif (!empty($runnerArgs['app'])) {
+			$file = APP_TEST_CASES . DS . str_replace('/', DS, $case) . 'Test.php';
+		} elseif (!empty($runnerArgs['plugin'])) {
+			$file = CakePlugin::path($runnerArgs['plugin']) . 'Test' . DS . 'Case' . DS . str_replace('/', DS, $case) . 'Test.php';
+		} else {
+			throw new Exception(__d('cake_dev', 'Unknown test category for case %s', $case));
+		}
+		if (!file_exists($file)) {
+			throw new Exception(__d('cake_dev', 'Test case %s not found', $file));
+		}
+		return $file;
 	}
 
 /**

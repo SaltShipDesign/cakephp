@@ -149,7 +149,7 @@ class CakeEmailTest extends CakeTestCase {
  *
  * @return void
  */
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 
 		$this->_configFileExists = true;
@@ -171,7 +171,7 @@ class CakeEmailTest extends CakeTestCase {
  *
  * @return void
  */
-	public function tearDown() {
+	public function tearDown(): void {
 		parent::tearDown();
 		App::build();
 
@@ -1895,7 +1895,7 @@ class CakeEmailTest extends CakeTestCase {
 		$this->CakeEmail->reset();
 
 		$this->assertSame('utf-8', $this->CakeEmail->charset, $this->CakeEmail->charset);
-		$this->assertNull($this->CakeEmail->headerCharset, $this->CakeEmail->headerCharset);
+		$this->assertNull($this->CakeEmail->headerCharset, 'headerCharset should be null after reset');
 	}
 
 /**

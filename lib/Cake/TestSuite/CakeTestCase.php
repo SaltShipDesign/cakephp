@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestResult;
 App::uses('CakeFixtureManager', 'TestSuite/Fixture');
 App::uses('CakeTestFixture', 'TestSuite/Fixture');
 
+#[\AllowDynamicProperties]
 abstract class CakeTestCase extends TestCase {
 
 /**
@@ -32,6 +33,16 @@ abstract class CakeTestCase extends TestCase {
  * Configure values to restore at end of test.
  */
 	protected $_configure = [];
+
+/**
+ * Pristine values of specific Configure keys captured at the first test setUp.
+ * Used to undo per-test leaks for keys that tests routinely mutate without
+ * restoring (e.g. `debug` written to 0 by a test that then throws via
+ * @expectedException, skipping its own restore).
+ *
+ * @var array|null
+ */
+	protected static $_pristineConfigureKeys = null;
 
 /**
  * Path settings to restore at the end of the test.
@@ -94,11 +105,126 @@ abstract class CakeTestCase extends TestCase {
  *
  * @return bool
  */
-	public function skipIf(bool $shouldSkip, string $message = '') {
+	public function skipIf($shouldSkip, string $message = ''): bool {
+		$shouldSkip = (bool)$shouldSkip;
 		if ($shouldSkip) {
 			$this->markTestSkipped($message);
 		}
 		return $shouldSkip;
+	}
+
+/**
+ * Backwards-compatible assertContains that handles string haystacks.
+ * PHPUnit 9 split string-contains into assertStringContainsString; CakePHP 2.x
+ * tests still pass strings to assertContains. Dispatch by haystack type.
+ *
+ * @param mixed $needle
+ * @param mixed $haystack
+ * @param string $message
+ * @return void
+ */
+	public static function assertContains($needle, $haystack, string $message = ''): void {
+		if (is_string($haystack)) {
+			static::assertStringContainsString((string)$needle, $haystack, $message);
+			return;
+		}
+		parent::assertContains($needle, $haystack, $message);
+	}
+
+/**
+ * Polyfill for the pre-PHPUnit 6 setExpectedException() method, removed
+ * in PHPUnit 9. Some CakePHP 2.x tests still call it.
+ *
+ * @param string $exceptionName
+ * @param string|null $exceptionMessage
+ * @param int|null $exceptionCode
+ * @return void
+ */
+	public function setExpectedException($exceptionName, $exceptionMessage = null, $exceptionCode = null) {
+		$this->expectException($exceptionName);
+		if ($exceptionMessage !== null) {
+			$this->expectExceptionMessage($exceptionMessage);
+		}
+		if ($exceptionCode !== null) {
+			$this->expectExceptionCode($exceptionCode);
+		}
+	}
+
+/**
+ * Polyfill for attributeEqualTo() constraint, removed in PHPUnit 9.
+ * Returns a Callback constraint that reads the named property via reflection
+ * (so protected/private fields work) and compares with loose equality.
+ *
+ * @param string $attributeName
+ * @param mixed $value
+ * @return \PHPUnit\Framework\Constraint\Callback
+ */
+	public static function attributeEqualTo(string $attributeName, $value): \PHPUnit\Framework\Constraint\Callback {
+		return new \PHPUnit\Framework\Constraint\Callback(function ($other) use ($attributeName, $value) {
+			if (!is_object($other)) {
+				return false;
+			}
+			try {
+				$property = new \ReflectionProperty($other, $attributeName);
+			} catch (\ReflectionException $e) {
+				return false;
+			}
+			$property->setAccessible(true);
+			return $property->getValue($other) == $value;
+		});
+	}
+
+/**
+ * Polyfill for assertAttributeCount, removed in PHPUnit 9. Reads a
+ * (possibly protected/private) attribute via reflection and asserts its
+ * count matches.
+ *
+ * @param int $expectedCount
+ * @param string $actualAttributeName
+ * @param object|string $actualClassOrObject
+ * @param string $message
+ * @return void
+ */
+	public static function assertAttributeCount(int $expectedCount, string $actualAttributeName, $actualClassOrObject, string $message = ''): void {
+		$reflection = new \ReflectionClass($actualClassOrObject);
+		$property = $reflection->getProperty($actualAttributeName);
+		$property->setAccessible(true);
+		$actual = is_object($actualClassOrObject) ? $property->getValue($actualClassOrObject) : $property->getValue();
+		static::assertCount($expectedCount, $actual, $message);
+	}
+
+/**
+ * Polyfill for assertAttributeEquals, removed in PHPUnit 9.
+ * Reads a (possibly protected/private) attribute via reflection and compares.
+ *
+ * @param mixed $expected
+ * @param string $actualAttributeName
+ * @param object|string $actualClassOrObject
+ * @param string $message
+ * @return void
+ */
+	public static function assertAttributeEquals($expected, string $actualAttributeName, $actualClassOrObject, string $message = ''): void {
+		$reflection = new \ReflectionClass($actualClassOrObject);
+		$property = $reflection->getProperty($actualAttributeName);
+		$property->setAccessible(true);
+		$actual = is_object($actualClassOrObject) ? $property->getValue($actualClassOrObject) : $property->getValue();
+		static::assertEquals($expected, $actual, $message);
+	}
+
+/**
+ * Mirror of assertContains: route string haystacks to assertStringNotContainsString.
+ *
+ * @param mixed $needle
+ * @param mixed $haystack
+ * @param string $message
+ * @return void
+ */
+	public static function assertNotContains($needle, $haystack, string $message = ''): void {
+		if (is_string($haystack)) {
+			static::assertStringNotContainsString((string)$needle, $haystack, $message);
+			return;
+		}
+		parent::assertNotContains($needle, $haystack, $message);
 	}
 
 /**
@@ -111,6 +237,36 @@ abstract class CakeTestCase extends TestCase {
 	public function setUp(): void {
 		parent::setUp();
 
+		$this->_processExpectedExceptionAnnotations();
+
+		if (!isset($this->_cakeTestSuperglobalBackup)) {
+			$this->_cakeTestSuperglobalBackup = array(
+				'SERVER' => $_SERVER,
+				'POST' => $_POST,
+				'GET' => $_GET,
+				'FILES' => $_FILES,
+				'COOKIE' => $_COOKIE,
+			);
+		}
+
+		// Snapshot a couple of routinely-leaked Configure keys ONCE per process.
+		// Tests that write Configure::write('debug', 0) and then throw via
+		// @expectedException skip their own restore, leaking the change into
+		// every subsequent test's `_configure` snapshot. Force-reset those
+		// known-leaky keys to their pristine values BEFORE capturing the
+		// per-test `_configure` so the per-test restore picks up the right
+		// values. Other keys (e.g. Session.handler set via setUpBeforeClass)
+		// are intentionally left alone.
+		if (static::$_pristineConfigureKeys === null) {
+			static::$_pristineConfigureKeys = array(
+				'debug' => Configure::read('debug'),
+			);
+		}
+		foreach (static::$_pristineConfigureKeys as $key => $value) {
+			if ($value !== null) {
+				Configure::write($key, $value);
+			}
+		}
 		if (empty($this->_configure)) {
 			$this->_configure = Configure::read();
 		}
@@ -123,11 +279,107 @@ abstract class CakeTestCase extends TestCase {
 	}
 
 /**
+ * Polyfill for @expectedException* docblock annotations (removed in PHPUnit 9).
+ * Reads the current test method's docblock and calls expectException()/Message()/Code()
+ * accordingly. Lets the ~234 legacy annotations across the test suite keep working
+ * without rewriting them as in-body expectException() calls.
+ *
+ * @return void
+ */
+	protected function _processExpectedExceptionAnnotations(): void {
+		$name = $this->getName(false);
+		if (!$name) {
+			return;
+		}
+		try {
+			$method = new \ReflectionMethod($this, $name);
+		} catch (\ReflectionException $e) {
+			return;
+		}
+		$doc = $method->getDocComment();
+		if (!$doc) {
+			return;
+		}
+		if (preg_match('/@expectedException\s+([^\s\*]+)/', $doc, $m)) {
+			$this->expectException($m[1]);
+			$this->_installErrorHandlerForExpectedException($m[1]);
+		}
+		if (preg_match('/@expectedExceptionMessage\s+([^\r\n\*]+)/', $doc, $m)) {
+			$this->expectExceptionMessage(trim($m[1]));
+		}
+		if (preg_match('/@expectedExceptionMessageRegExp\s+([^\r\n\*]+)/', $doc, $m)) {
+			$this->expectExceptionMessageMatches(trim($m[1]));
+		}
+		if (preg_match('/@expectedExceptionCode\s+([^\s\*]+)/', $doc, $m)) {
+			$this->expectExceptionCode(is_numeric($m[1]) ? (int)$m[1] : $m[1]);
+		}
+	}
+
+/**
+ * When a test expects PHPUnit_Framework_Error{,_Warning,_Notice}, PHPUnit's
+ * built-in error→exception conversion may not engage because CakePHP installs
+ * its own error handler during bootstrap and PHPUnit's ErrorHandler::register()
+ * refuses to install on top of an existing handler. Install a targeted handler
+ * that throws the expected exception class so the test sees what it expects.
+ *
+ * @param string $exceptionClass The expected exception class from the docblock.
+ * @return void
+ */
+	protected function _installErrorHandlerForExpectedException(string $exceptionClass): void {
+		$expectsPhpError = (
+			strpos($exceptionClass, 'PHPUnit_Framework_Error') === 0 ||
+			strpos($exceptionClass, 'PHPUnit\\Framework\\Error\\') === 0
+		);
+		if (!$expectsPhpError) {
+			return;
+		}
+		$this->_cakeTestExpectedErrorClass = $exceptionClass;
+		set_error_handler(function ($severity, $message, $file, $line) use ($exceptionClass) {
+			if (!($severity & error_reporting())) {
+				return false;
+			}
+			$resolved = $exceptionClass;
+			switch ($severity) {
+				case E_NOTICE:
+				case E_USER_NOTICE:
+				case E_STRICT:
+					$resolved = 'PHPUnit_Framework_Error_Notice';
+					break;
+				case E_WARNING:
+				case E_USER_WARNING:
+					$resolved = 'PHPUnit_Framework_Error_Warning';
+					break;
+				case E_DEPRECATED:
+				case E_USER_DEPRECATED:
+					return false;
+				default:
+					$resolved = 'PHPUnit_Framework_Error';
+			}
+			if (!class_exists($resolved, false)) {
+				$resolved = $exceptionClass;
+			}
+			throw new $resolved($message, $severity, $file, $line);
+		});
+	}
+
+/**
  * teardown any static object changes and restore them.
  *
  * @return void
  */
 	public function tearDown(): void {
+		if (isset($this->_cakeTestExpectedErrorClass)) {
+			restore_error_handler();
+			unset($this->_cakeTestExpectedErrorClass);
+		}
+		if (isset($this->_cakeTestSuperglobalBackup)) {
+			$_SERVER = $this->_cakeTestSuperglobalBackup['SERVER'];
+			$_POST = $this->_cakeTestSuperglobalBackup['POST'];
+			$_GET = $this->_cakeTestSuperglobalBackup['GET'];
+			$_FILES = $this->_cakeTestSuperglobalBackup['FILES'];
+			$_COOKIE = $this->_cakeTestSuperglobalBackup['COOKIE'];
+			unset($this->_cakeTestSuperglobalBackup);
+		}
 		parent::tearDown();
 		App::build($this->_pathRestore, App::RESET);
 		if (class_exists('ClassRegistry', false)) {
