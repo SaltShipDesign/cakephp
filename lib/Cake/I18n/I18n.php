@@ -26,6 +26,7 @@ App::uses('CakeSession', 'Model/Datasource');
  *
  * @package       Cake.I18n
  */
+#[\AllowDynamicProperties]
 class I18n {
 
 /**
@@ -233,6 +234,14 @@ class I18n {
 
 		if (!isset($_this->_domains[$domain][$_this->_lang])) {
 			$_this->_domains[$domain][$_this->_lang] = Cache::read($_this->domain, '_cake_core_');
+		}
+
+		// Cache::read returns `false` on a miss. PHP 8.1 emits a deprecation
+		// when an array offset is read off a bool — normalize to an empty
+		// array so the subsequent isset/empty/offset reads stay quiet, and
+		// `_bindTextDomain` gets called the same way it would on a miss.
+		if ($_this->_domains[$domain][$_this->_lang] === false) {
+			$_this->_domains[$domain][$_this->_lang] = array();
 		}
 
 		if (!isset($_this->_domains[$domain][$_this->_lang][$_this->category])) {

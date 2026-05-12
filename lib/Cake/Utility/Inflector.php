@@ -369,6 +369,10 @@ class Inflector {
  * @link https://book.cakephp.org/2.0/en/core-utility-libraries/inflector.html#Inflector::pluralize
  */
 	public static function pluralize($word) {
+		// PHP 8.1+ emits deprecation when null is passed as subject to
+		// preg_match / preg_replace. Coerce at the boundary so user code
+		// that calls Inflector with a possibly-null value stays quiet.
+		$word = (string)$word;
 		if (isset(static::$_cache['pluralize'][$word])) {
 			return static::$_cache['pluralize'][$word];
 		}
@@ -414,6 +418,7 @@ class Inflector {
  * @link https://book.cakephp.org/2.0/en/core-utility-libraries/inflector.html#Inflector::singularize
  */
 	public static function singularize($word) {
+		$word = (string)$word;
 		if (isset(static::$_cache['singularize'][$word])) {
 			return static::$_cache['singularize'][$word];
 		}
@@ -467,6 +472,7 @@ class Inflector {
  * @link https://book.cakephp.org/2.0/en/core-utility-libraries/inflector.html#Inflector::camelize
  */
 	public static function camelize($lowerCaseAndUnderscoredWord) {
+		$lowerCaseAndUnderscoredWord = (string)$lowerCaseAndUnderscoredWord;
 		if (!($result = static::_cache(__FUNCTION__, $lowerCaseAndUnderscoredWord))) {
 			$result = str_replace(' ', '', Inflector::humanize($lowerCaseAndUnderscoredWord));
 			static::_cache(__FUNCTION__, $lowerCaseAndUnderscoredWord, $result);
@@ -482,6 +488,7 @@ class Inflector {
  * @link https://book.cakephp.org/2.0/en/core-utility-libraries/inflector.html#Inflector::underscore
  */
 	public static function underscore($camelCasedWord) {
+		$camelCasedWord = (string)$camelCasedWord;
 		if (!($result = static::_cache(__FUNCTION__, $camelCasedWord))) {
 			$underscoredWord = preg_replace('/(?<=\\w)([A-Z])/', '_\\1', $camelCasedWord);
 			$result = mb_strtolower($underscoredWord);
@@ -499,6 +506,7 @@ class Inflector {
  * @link https://book.cakephp.org/2.0/en/core-utility-libraries/inflector.html#Inflector::humanize
  */
 	public static function humanize($lowerCaseAndUnderscoredWord) {
+		$lowerCaseAndUnderscoredWord = (string)$lowerCaseAndUnderscoredWord;
 		if (!($result = static::_cache(__FUNCTION__, $lowerCaseAndUnderscoredWord))) {
 			$result = explode(' ', str_replace('_', ' ', $lowerCaseAndUnderscoredWord));
 			foreach ($result as &$word) {
@@ -567,6 +575,7 @@ class Inflector {
  * @link https://book.cakephp.org/2.0/en/core-utility-libraries/inflector.html#Inflector::slug
  */
 	public static function slug($string, $replacement = '_') {
+		$string = (string)$string;
 		$quotedReplacement = preg_quote($replacement, '/');
 
 		$merge = array(

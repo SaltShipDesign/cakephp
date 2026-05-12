@@ -37,6 +37,7 @@ if (!defined('APP_TEST_CASES')) {
 	define('APP_TEST_CASES', TESTS . 'Case');
 }
 
+#[\AllowDynamicProperties]
 class CakeTestSuiteDispatcher {
 
 /**
