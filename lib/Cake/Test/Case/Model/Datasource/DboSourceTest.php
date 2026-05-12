@@ -1417,7 +1417,39 @@ class DboSourceTest extends CakeTestCase {
  * @return void
  */
 	public function testTransactionNested() {
-		$this->markTestSkipped('PHPUnit 9 deprecated $this->at() matcher; needs withConsecutive() rewrite.');
+		$conn = $this->getMock('MockPDO');
+		$db = new DboTestSource();
+		$db->setConnection($conn);
+		$db->useNestedTransactions = true;
+		$db->nestedSupport = true;
+
+		$conn->expects($this->once())
+			->method('beginTransaction')
+			->will($this->returnValue(true));
+
+		// `_runTransactions()` issues four nested-savepoint exec() calls in
+		// this order. The original test used $this->at(0..5), but at() counts
+		// invocations across ALL methods on the mock (deprecated in PHPUnit 9
+		// and prone to off-by-one errors). withConsecutive() is per-method
+		// and expresses the actual intent.
+		// Note: PDO::exec has return type `int|false` on PHP 8.x — the mock
+		// inherits that signature, so we return an int (rows-affected) rather
+		// than `true`.
+		$conn->expects($this->exactly(4))
+			->method('exec')
+			->withConsecutive(
+				array($this->equalTo('SAVEPOINT LEVEL1')),
+				array($this->equalTo('RELEASE SAVEPOINT LEVEL1')),
+				array($this->equalTo('SAVEPOINT LEVEL1')),
+				array($this->equalTo('ROLLBACK TO SAVEPOINT LEVEL1'))
+			)
+			->will($this->returnValue(1));
+
+		$conn->expects($this->once())
+			->method('commit')
+			->will($this->returnValue(true));
+
+		$this->_runTransactions($db);
 	}
 
 /**
